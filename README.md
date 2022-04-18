@@ -12,6 +12,8 @@
 
 2. Write markdown file instead of word, convert to pdf at end
 
+- To link to images: use https://raw.githubusercontent.com/alexiskaldany/TS_final/main/final-images/(name of file)
+
 ## Requirements
 
 - Description of the dataset. Describe the independent variable(s) and dependent variable:
