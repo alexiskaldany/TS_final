@@ -20,7 +20,7 @@
 
 ### Visualization of Variable Locations
 
-![House Variable Visualization]("/final-images/variable_location_within_house.png" "Viz")
+![House Variable Visualization](https://raw.githubusercontent.com/alexiskaldany/TS_final/main/final-images/variable_location_within_house.png)
 
 ### Table of Variables
 
