@@ -213,7 +213,7 @@ def average_prediction(train_series, h_steps):
     for index, x in np.ndenumerate(train_series):
         prediction.append(train_series[:index[0]].mean())
     forecast = np.full(fill_value=average, shape=(h_steps,))
-    return np.array(prediction[:-1]), np.array(forecast[:-1])
+    return np.array(prediction[:]), np.array(forecast[:-1])
 
 
 def error(observation, prediction):
@@ -667,3 +667,57 @@ def Autocorr(array, lag):
     den_sum = sum(den)
     result_array = round(num_sum / den_sum, 4)
     return result_array
+
+#########
+
+def one_step_average_method(x):
+    x = []
+    for i in range(1,len(x)):
+        m = np.mean(np.array(x[0:i]))
+        x.append(m)
+    return x
+
+
+
+def h_step_average_method(train, test):
+    forecast = np.mean(train)
+    predictions = []
+    for i in range(len(test)):
+        predictions.append(forecast)
+    return predictions
+
+
+def one_step_naive_method(x):
+    forecast = []
+    for i in range(len(x)-1):
+        forecast.append(x[i])
+    return forecast
+
+def h_step_naive_method(test,train):
+    forecast = [test[-1] for i in range (len(train))]
+    return forecast
+
+
+def SES_train(yt,alpha, initial=430):
+    prediction = [initial]
+    for i in range(1,len(yt)):
+        s= alpha*yt[i-1] + (1-alpha)*prediction[i-1]
+        prediction.append(s)
+    return prediction
+
+def one_step_drift_method(x):
+    forecast =[]
+    for i in range(1,len(x)-1):
+        prediction = x[i]+(x[i]-x[0])/i
+        forecast.append(prediction)
+    forecast = [x[0]] + forecast
+    return forecast
+
+
+def h_step_drift_method(train,test):
+    forecast = []
+    prediction = (train[-1] - train[0]) / (len(train)-1)
+    for i in range(1,len(test) + 1):
+        forecast.append(train[-1]+ i*prediction)
+    return forecast
+

@@ -19,6 +19,7 @@ from sklearn.model_selection import train_test_split
 from keras.preprocessing.sequence import TimeseriesGenerator
 from keras.preprocessing.timeseries import timeseries_dataset_from_array
 import statsmodels.tsa.holtwinters as ets
+from sklearn.metrics import mean_squared_error
 from numpy import linalg as LA
 warnings.filterwarnings('ignore')
 image_folder = 'final-images/'
@@ -101,334 +102,334 @@ plt.savefig(image_folder+'rolling_original.png', dpi=1000)
 plt.show()
 
 # ############ Difference Dataframes
-log_df = log_transform(df.Appliances,df.index)
-diff_df = pd.DataFrame()
-diff_df['Original'] = df.Appliances
-diff_df_list = [diff(df.Appliances,x,df.index) for x in range(1,301)]
-diff_combined_df = pd.concat(diff_df_list,axis=1)
-diff_combined_df.to_csv('diff_combined_df.csv')
-##
-log_diff_list = [diff(log_df['log_transform'],x,log_df.index) for x in range(1,301)]
-log_diff_df = pd.concat(log_diff_list,axis=1)
-log_diff_df.to_csv('log_diff_df.csv')
-log_diff_df = pd.read_csv('log_diff_df.csv')
-diff_combined_df= pd.read_csv('diff_combined_df.csv')
-## Log Transform Dataframes
+# log_df = log_transform(df.Appliances,df.index)
+# diff_df = pd.DataFrame()
+# diff_df['Original'] = df.Appliances
+# diff_df_list = [diff(df.Appliances,x,df.index) for x in range(1,301)]
+# diff_combined_df = pd.concat(diff_df_list,axis=1)
+# diff_combined_df.to_csv('diff_combined_df.csv')
+# ##
+# log_diff_list = [diff(log_df['log_transform'],x,log_df.index) for x in range(1,301)]
+# log_diff_df = pd.concat(log_diff_list,axis=1)
+# log_diff_df.to_csv('log_diff_df.csv')
+# log_diff_df = pd.read_csv('log_diff_df.csv')
+# diff_combined_df= pd.read_csv('diff_combined_df.csv')
+# ## Log Transform Dataframes
 
-## Cannot take log after difference because of negatives
-log_diff_list = [log_transform(diff_combined_df[f"{x}_diff"],diff_combined_df.index) for x in range(1,301)]
-diff_log_df = pd.concat(log_diff_list,axis=1)
-# Testing log transform on original Appliances
-original_transform = adf_kpss_statistic(log_df.log_transform)
-print(original_transform)
-#################
-# Testing for Stationarity
-adf_list = []
-kpss_list = []
-for x in range(1,301):
-    output = adf_kpss_statistic(diff_combined_df[f"{x}_diff"])
-    adf_list.append(output[0])
-    kpss_list.append(output[1])
-diff_stats = pd.DataFrame(index=range(1,301))
-diff_stats['ADF'] = adf_list
-diff_stats['KPSS'] = kpss_list
-diff_stats.to_csv('diff_stats.csv')
-## ADF Test statistic high == low p value == alternative hypothesis == stationarity
-## KPSS Test statistic high == low p value == alternative hypothesis == non-stationarity
-# ADF
-plt.figure(figsize=(12, 8), layout='constrained')
-plt.plot(diff_stats.index,diff_stats['ADF'])
-plt.title('ADF Statistics vs Diff Intervals')
-plt.xlabel('Diff Intervals')
-plt.ylabel('ADF Statistics')
-plt.grid()
-plt.savefig(image_folder+'1a-ADF-Stats.png',dpi=1000)
-plt.show()
-## KPSS
-plt.figure(figsize=(12, 8), layout='constrained')
-plt.plot(diff_stats.index,diff_stats['KPSS'])
-plt.title('KPSS Statistics vs Diff Intervals')
-plt.xlabel('Diff Intervals')
-plt.ylabel('KPSS Statistics')
-plt.grid()
-plt.savefig(image_folder+'1a-KPSS-Stats.png',dpi=1000)
-plt.show()
+# ## Cannot take log after difference because of negatives
+# log_diff_list = [log_transform(diff_combined_df[f"{x}_diff"],diff_combined_df.index) for x in range(1,301)]
+# diff_log_df = pd.concat(log_diff_list,axis=1)
+# # Testing log transform on original Appliances
+# original_transform = adf_kpss_statistic(log_df.log_transform)
+# print(original_transform)
+# #################
+# # Testing for Stationarity
+# adf_list = []
+# kpss_list = []
+# for x in range(1,301):
+#     output = adf_kpss_statistic(diff_combined_df[f"{x}_diff"])
+#     adf_list.append(output[0])
+#     kpss_list.append(output[1])
+# diff_stats = pd.DataFrame(index=range(1,301))
+# diff_stats['ADF'] = adf_list
+# diff_stats['KPSS'] = kpss_list
+# diff_stats.to_csv('diff_stats.csv')
+# ## ADF Test statistic high == low p value == alternative hypothesis == stationarity
+# ## KPSS Test statistic high == low p value == alternative hypothesis == non-stationarity
+# # ADF
+# plt.figure(figsize=(12, 8), layout='constrained')
+# plt.plot(diff_stats.index,diff_stats['ADF'])
+# plt.title('ADF Statistics vs Diff Intervals')
+# plt.xlabel('Diff Intervals')
+# plt.ylabel('ADF Statistics')
+# plt.grid()
+# plt.savefig(image_folder+'1a-ADF-Stats.png',dpi=1000)
+# plt.show()
+# ## KPSS
+# plt.figure(figsize=(12, 8), layout='constrained')
+# plt.plot(diff_stats.index,diff_stats['KPSS'])
+# plt.title('KPSS Statistics vs Diff Intervals')
+# plt.xlabel('Diff Intervals')
+# plt.ylabel('KPSS Statistics')
+# plt.grid()
+# plt.savefig(image_folder+'1a-KPSS-Stats.png',dpi=1000)
+# plt.show()
 
-#########
-# Rolling mean/var
-log_mean_var = cal_rolling_mean_var(log_df.log_transform)
-diff_10_mean_var = cal_rolling_mean_var(diff_combined_df['10_diff'])
-diff_25_mean_var = cal_rolling_mean_var(diff_combined_df['25_diff'])
-diff_50_mean_var = cal_rolling_mean_var(diff_combined_df['50_diff'])
-diff_150_mean_var = cal_rolling_mean_var(diff_combined_df['150_diff'])
-diff_300_mean_var = cal_rolling_mean_var(diff_combined_df['300_diff'])
-log_diff_1_mean_var = cal_rolling_mean_var(log_diff_df['1_diff'])
-log_diff_2_mean_var = cal_rolling_mean_var(log_diff_df['2_diff'])
-log_diff_3_mean_var = cal_rolling_mean_var(log_diff_df['3_diff'])
-log_diff_4_mean_var = cal_rolling_mean_var(log_diff_df['4_diff'])
-log_diff_5_mean_var = cal_rolling_mean_var(log_diff_df['5_diff'])
-log_diff_10_mean_var = cal_rolling_mean_var(log_diff_df['10_diff'])
-log_diff_25_mean_var = cal_rolling_mean_var(log_diff_df['25_diff'])
-log_diff_50_mean_var = cal_rolling_mean_var(log_diff_df['50_diff'])
-log_diff_150_mean_var = cal_rolling_mean_var(log_diff_df['150_diff'])
-log_diff_300_mean_var = cal_rolling_mean_var(log_diff_df['300_diff'])
-## Plotting
-# Log rolling
-fig, (ax1, ax2) = plt.subplots(2, 1)
-fig.suptitle('Log Data')
-ax1.plot(log_mean_var.index, log_mean_var['Rolling Mean'])
-ax1.set_ylabel('Rolling Mean')
-ax2.plot(log_mean_var.index, log_mean_var['Rolling Variance'])
-ax2.set_xlabel('Date')
-ax2.set_ylabel('Rolling Variance')
-plt.savefig(image_folder+'rolling_log.png', dpi=1000)
-plt.show()
-# 10 diff
-fig, (ax1, ax2) = plt.subplots(2, 1)
-fig.suptitle('10 Diff')
-ax1.plot(diff_10_mean_var.index, diff_10_mean_var['Rolling Mean'])
-ax1.set_ylabel('Rolling Mean')
-ax2.plot(diff_10_mean_var.index, diff_10_mean_var['Rolling Variance'])
-ax2.set_xlabel('Date')
-ax2.set_ylabel('Rolling Variance')
-plt.savefig(image_folder+'rolling_diff_10.png', dpi=1000)
-plt.show()
-# 25 diff
-fig, (ax1, ax2) = plt.subplots(2, 1)
-fig.suptitle('25 Diff')
-ax1.plot(diff_25_mean_var.index, diff_25_mean_var['Rolling Mean'])
-ax1.set_ylabel('Rolling Mean')
-ax2.plot(diff_25_mean_var.index, diff_25_mean_var['Rolling Variance'])
-ax2.set_xlabel('Date')
-ax2.set_ylabel('Rolling Variance')
-plt.savefig(image_folder+'rolling_diff_25.png', dpi=1000)
-plt.show()
-# 50 dif
-fig, (ax1, ax2) = plt.subplots(2, 1)
-fig.suptitle('50 Diff ')
-ax1.plot(diff_50_mean_var.index, diff_50_mean_var['Rolling Mean'])
-ax1.set_ylabel('Rolling Mean')
-ax2.plot(diff_50_mean_var.index, diff_50_mean_var['Rolling Variance'])
-ax2.set_xlabel('Date')
-ax2.set_ylabel('Rolling Variance')
-plt.savefig(image_folder+'rolling_diff_50.png', dpi=1000)
-plt.show()
-#150 dif
-fig, (ax1, ax2) = plt.subplots(2, 1)
-fig.suptitle('150 Diff ')
-ax1.plot(diff_150_mean_var.index, diff_150_mean_var['Rolling Mean'])
-ax1.set_ylabel('Rolling Mean')
-ax2.plot(diff_150_mean_var.index, diff_150_mean_var['Rolling Variance'])
-ax2.set_xlabel('Date')
-ax2.set_ylabel('Rolling Variance')
-plt.savefig(image_folder+'rolling_diff_150.png', dpi=1000)
-plt.show()
-#300 dif
-fig, (ax1, ax2) = plt.subplots(2, 1)
-fig.suptitle('300 Diff ')
-ax1.plot(diff_300_mean_var.index, diff_300_mean_var['Rolling Mean'])
-ax1.set_ylabel('Rolling Mean')
-ax2.plot(diff_300_mean_var.index, diff_300_mean_var['Rolling Variance'])
-ax2.set_xlabel('Date')
-ax2.set_ylabel('Rolling Variance')
-plt.savefig(image_folder+'rolling_diff_300.png', dpi=1000)
-plt.show()
-# 1 log diff
-fig, (ax1, ax2) = plt.subplots(2, 1)
-fig.suptitle('1 Log Diff ')
-ax1.plot(log_diff_1_mean_var.index, log_diff_1_mean_var['Rolling Mean'])
-ax1.set_ylabel('Rolling Mean')
-ax2.plot(log_diff_1_mean_var.index, log_diff_1_mean_var['Rolling Variance'])
-ax2.set_xlabel('Date')
-ax2.set_ylabel('Rolling Variance')
-plt.savefig(image_folder+'rolling_log_diff_1.png', dpi=1000)
-plt.show()
-# 2 Log Diff
-fig, (ax1, ax2) = plt.subplots(2, 1)
-fig.suptitle('2 Log Diff ')
-ax1.plot(log_diff_2_mean_var.index, log_diff_2_mean_var['Rolling Mean'])
-ax1.set_ylabel('Rolling Mean')
-ax2.plot(log_diff_2_mean_var.index, log_diff_2_mean_var['Rolling Variance'])
-ax2.set_xlabel('Date')
-ax2.set_ylabel('Rolling Variance')
-plt.savefig(image_folder+'rolling_log_diff_2.png', dpi=1000)
-plt.show()
-# 3 Log Diff
-fig, (ax1, ax2) = plt.subplots(2, 1)
-fig.suptitle('3 Log Diff ')
-ax1.plot(log_diff_3_mean_var.index, log_diff_3_mean_var['Rolling Mean'])
-ax1.set_ylabel('Rolling Mean')
-ax2.plot(log_diff_3_mean_var.index, log_diff_3_mean_var['Rolling Variance'])
-ax2.set_xlabel('Date')
-ax2.set_ylabel('Rolling Variance')
-plt.savefig(image_folder+'rolling_log_diff_3.png', dpi=1000)
-plt.show()
-# 4 Log Diff
-fig, (ax1, ax2) = plt.subplots(2, 1)
-fig.suptitle('4 Log Diff ')
-ax1.plot(log_diff_4_mean_var.index, log_diff_4_mean_var['Rolling Mean'])
-ax1.set_ylabel('Rolling Mean')
-ax2.plot(log_diff_4_mean_var.index, log_diff_4_mean_var['Rolling Variance'])
-ax2.set_xlabel('Date')
-ax2.set_ylabel('Rolling Variance')
-plt.savefig(image_folder+'rolling_log_diff_4.png', dpi=1000)
-plt.show()
-# 5 Log Diff
-fig, (ax1, ax2) = plt.subplots(2, 1)
-fig.suptitle('5 Log Diff ')
-ax1.plot(log_diff_5_mean_var.index, log_diff_5_mean_var['Rolling Mean'])
-ax1.set_ylabel('Rolling Mean')
-ax2.plot(log_diff_5_mean_var.index, log_diff_5_mean_var['Rolling Variance'])
-ax2.set_xlabel('Date')
-ax2.set_ylabel('Rolling Variance')
-plt.savefig(image_folder+'rolling_log_diff_5.png', dpi=1000)
-plt.show()
-# 10 Log Diff
-fig, (ax1, ax2) = plt.subplots(2, 1)
-fig.suptitle('10 Log Diff ')
-ax1.plot(log_diff_10_mean_var.index, log_diff_10_mean_var['Rolling Mean'])
-ax1.set_ylabel('Rolling Mean')
-ax2.plot(log_diff_10_mean_var.index, log_diff_10_mean_var['Rolling Variance'])
-ax2.set_xlabel('Date')
-ax2.set_ylabel('Rolling Variance')
-plt.savefig(image_folder+'rolling_log_diff_10.png', dpi=1000)
-plt.show()
-# 25 log diff
-fig, (ax1, ax2) = plt.subplots(2, 1)
-fig.suptitle('25 Log Diff ')
-ax1.plot(log_diff_25_mean_var.index, log_diff_25_mean_var['Rolling Mean'])
-ax1.set_ylabel('Rolling Mean')
-ax2.plot(log_diff_25_mean_var.index, log_diff_25_mean_var['Rolling Variance'])
-ax2.set_xlabel('Date')
-ax2.set_ylabel('Rolling Variance')
-plt.savefig(image_folder+'rolling_log_diff_25.png', dpi=1000)
-plt.show()
-# 50 log diff
-fig, (ax1, ax2) = plt.subplots(2, 1)
-fig.suptitle('50 Log Diff ')
-ax1.plot(log_diff_50_mean_var.index, log_diff_50_mean_var['Rolling Mean'])
-ax1.set_ylabel('Rolling Mean')
-ax2.plot(log_diff_50_mean_var.index, log_diff_50_mean_var['Rolling Variance'])
-ax2.set_xlabel('Date')
-ax2.set_ylabel('Rolling Variance')
-plt.savefig(image_folder+'rolling_log_diff_50.png', dpi=1000)
-plt.show()
-#150 log diff
-fig, (ax1, ax2) = plt.subplots(2, 1)
-fig.suptitle('150 Log Diff ')
-ax1.plot(log_diff_150_mean_var.index, log_diff_150_mean_var['Rolling Mean'])
-ax1.set_ylabel('Rolling Mean')
-ax2.plot(log_diff_150_mean_var.index, log_diff_150_mean_var['Rolling Variance'])
-ax2.set_xlabel('Date')
-ax2.set_ylabel('Rolling Variance')
-plt.savefig(image_folder+'rolling_log_diff_150.png', dpi=1000)
-plt.show()
-#300 log diff
-fig, (ax1, ax2) = plt.subplots(2, 1)
-fig.suptitle('300 Log Diff ')
-ax1.plot(log_diff_300_mean_var.index, log_diff_300_mean_var['Rolling Mean'])
-ax1.set_ylabel('Rolling Mean')
-ax2.plot(log_diff_300_mean_var.index, log_diff_300_mean_var['Rolling Variance'])
-ax2.set_xlabel('Date')
-ax2.set_ylabel('Rolling Variance')
-plt.savefig(image_folder+'rolling_log_diff_300.png', dpi=1000)
-plt.show()
-#%%
-
-
+# #########
+# # Rolling mean/var
+# log_mean_var = cal_rolling_mean_var(log_df.log_transform)
+# diff_10_mean_var = cal_rolling_mean_var(diff_combined_df['10_diff'])
+# diff_25_mean_var = cal_rolling_mean_var(diff_combined_df['25_diff'])
+# diff_50_mean_var = cal_rolling_mean_var(diff_combined_df['50_diff'])
+# diff_150_mean_var = cal_rolling_mean_var(diff_combined_df['150_diff'])
+# diff_300_mean_var = cal_rolling_mean_var(diff_combined_df['300_diff'])
+# log_diff_1_mean_var = cal_rolling_mean_var(log_diff_df['1_diff'])
+# log_diff_2_mean_var = cal_rolling_mean_var(log_diff_df['2_diff'])
+# log_diff_3_mean_var = cal_rolling_mean_var(log_diff_df['3_diff'])
+# log_diff_4_mean_var = cal_rolling_mean_var(log_diff_df['4_diff'])
+# log_diff_5_mean_var = cal_rolling_mean_var(log_diff_df['5_diff'])
+# log_diff_10_mean_var = cal_rolling_mean_var(log_diff_df['10_diff'])
+# log_diff_25_mean_var = cal_rolling_mean_var(log_diff_df['25_diff'])
+# log_diff_50_mean_var = cal_rolling_mean_var(log_diff_df['50_diff'])
+# log_diff_150_mean_var = cal_rolling_mean_var(log_diff_df['150_diff'])
+# log_diff_300_mean_var = cal_rolling_mean_var(log_diff_df['300_diff'])
+# ## Plotting
+# # Log rolling
+# fig, (ax1, ax2) = plt.subplots(2, 1)
+# fig.suptitle('Log Data')
+# ax1.plot(log_mean_var.index, log_mean_var['Rolling Mean'])
+# ax1.set_ylabel('Rolling Mean')
+# ax2.plot(log_mean_var.index, log_mean_var['Rolling Variance'])
+# ax2.set_xlabel('Date')
+# ax2.set_ylabel('Rolling Variance')
+# plt.savefig(image_folder+'rolling_log.png', dpi=1000)
+# plt.show()
+# # 10 diff
+# fig, (ax1, ax2) = plt.subplots(2, 1)
+# fig.suptitle('10 Diff')
+# ax1.plot(diff_10_mean_var.index, diff_10_mean_var['Rolling Mean'])
+# ax1.set_ylabel('Rolling Mean')
+# ax2.plot(diff_10_mean_var.index, diff_10_mean_var['Rolling Variance'])
+# ax2.set_xlabel('Date')
+# ax2.set_ylabel('Rolling Variance')
+# plt.savefig(image_folder+'rolling_diff_10.png', dpi=1000)
+# plt.show()
+# # 25 diff
+# fig, (ax1, ax2) = plt.subplots(2, 1)
+# fig.suptitle('25 Diff')
+# ax1.plot(diff_25_mean_var.index, diff_25_mean_var['Rolling Mean'])
+# ax1.set_ylabel('Rolling Mean')
+# ax2.plot(diff_25_mean_var.index, diff_25_mean_var['Rolling Variance'])
+# ax2.set_xlabel('Date')
+# ax2.set_ylabel('Rolling Variance')
+# plt.savefig(image_folder+'rolling_diff_25.png', dpi=1000)
+# plt.show()
+# # 50 dif
+# fig, (ax1, ax2) = plt.subplots(2, 1)
+# fig.suptitle('50 Diff ')
+# ax1.plot(diff_50_mean_var.index, diff_50_mean_var['Rolling Mean'])
+# ax1.set_ylabel('Rolling Mean')
+# ax2.plot(diff_50_mean_var.index, diff_50_mean_var['Rolling Variance'])
+# ax2.set_xlabel('Date')
+# ax2.set_ylabel('Rolling Variance')
+# plt.savefig(image_folder+'rolling_diff_50.png', dpi=1000)
+# plt.show()
+# #150 dif
+# fig, (ax1, ax2) = plt.subplots(2, 1)
+# fig.suptitle('150 Diff ')
+# ax1.plot(diff_150_mean_var.index, diff_150_mean_var['Rolling Mean'])
+# ax1.set_ylabel('Rolling Mean')
+# ax2.plot(diff_150_mean_var.index, diff_150_mean_var['Rolling Variance'])
+# ax2.set_xlabel('Date')
+# ax2.set_ylabel('Rolling Variance')
+# plt.savefig(image_folder+'rolling_diff_150.png', dpi=1000)
+# plt.show()
+# #300 dif
+# fig, (ax1, ax2) = plt.subplots(2, 1)
+# fig.suptitle('300 Diff ')
+# ax1.plot(diff_300_mean_var.index, diff_300_mean_var['Rolling Mean'])
+# ax1.set_ylabel('Rolling Mean')
+# ax2.plot(diff_300_mean_var.index, diff_300_mean_var['Rolling Variance'])
+# ax2.set_xlabel('Date')
+# ax2.set_ylabel('Rolling Variance')
+# plt.savefig(image_folder+'rolling_diff_300.png', dpi=1000)
+# plt.show()
+# # 1 log diff
+# fig, (ax1, ax2) = plt.subplots(2, 1)
+# fig.suptitle('1 Log Diff ')
+# ax1.plot(log_diff_1_mean_var.index, log_diff_1_mean_var['Rolling Mean'])
+# ax1.set_ylabel('Rolling Mean')
+# ax2.plot(log_diff_1_mean_var.index, log_diff_1_mean_var['Rolling Variance'])
+# ax2.set_xlabel('Date')
+# ax2.set_ylabel('Rolling Variance')
+# plt.savefig(image_folder+'rolling_log_diff_1.png', dpi=1000)
+# plt.show()
+# # 2 Log Diff
+# fig, (ax1, ax2) = plt.subplots(2, 1)
+# fig.suptitle('2 Log Diff ')
+# ax1.plot(log_diff_2_mean_var.index, log_diff_2_mean_var['Rolling Mean'])
+# ax1.set_ylabel('Rolling Mean')
+# ax2.plot(log_diff_2_mean_var.index, log_diff_2_mean_var['Rolling Variance'])
+# ax2.set_xlabel('Date')
+# ax2.set_ylabel('Rolling Variance')
+# plt.savefig(image_folder+'rolling_log_diff_2.png', dpi=1000)
+# plt.show()
+# # 3 Log Diff
+# fig, (ax1, ax2) = plt.subplots(2, 1)
+# fig.suptitle('3 Log Diff ')
+# ax1.plot(log_diff_3_mean_var.index, log_diff_3_mean_var['Rolling Mean'])
+# ax1.set_ylabel('Rolling Mean')
+# ax2.plot(log_diff_3_mean_var.index, log_diff_3_mean_var['Rolling Variance'])
+# ax2.set_xlabel('Date')
+# ax2.set_ylabel('Rolling Variance')
+# plt.savefig(image_folder+'rolling_log_diff_3.png', dpi=1000)
+# plt.show()
+# # 4 Log Diff
+# fig, (ax1, ax2) = plt.subplots(2, 1)
+# fig.suptitle('4 Log Diff ')
+# ax1.plot(log_diff_4_mean_var.index, log_diff_4_mean_var['Rolling Mean'])
+# ax1.set_ylabel('Rolling Mean')
+# ax2.plot(log_diff_4_mean_var.index, log_diff_4_mean_var['Rolling Variance'])
+# ax2.set_xlabel('Date')
+# ax2.set_ylabel('Rolling Variance')
+# plt.savefig(image_folder+'rolling_log_diff_4.png', dpi=1000)
+# plt.show()
+# # 5 Log Diff
+# fig, (ax1, ax2) = plt.subplots(2, 1)
+# fig.suptitle('5 Log Diff ')
+# ax1.plot(log_diff_5_mean_var.index, log_diff_5_mean_var['Rolling Mean'])
+# ax1.set_ylabel('Rolling Mean')
+# ax2.plot(log_diff_5_mean_var.index, log_diff_5_mean_var['Rolling Variance'])
+# ax2.set_xlabel('Date')
+# ax2.set_ylabel('Rolling Variance')
+# plt.savefig(image_folder+'rolling_log_diff_5.png', dpi=1000)
+# plt.show()
+# # 10 Log Diff
+# fig, (ax1, ax2) = plt.subplots(2, 1)
+# fig.suptitle('10 Log Diff ')
+# ax1.plot(log_diff_10_mean_var.index, log_diff_10_mean_var['Rolling Mean'])
+# ax1.set_ylabel('Rolling Mean')
+# ax2.plot(log_diff_10_mean_var.index, log_diff_10_mean_var['Rolling Variance'])
+# ax2.set_xlabel('Date')
+# ax2.set_ylabel('Rolling Variance')
+# plt.savefig(image_folder+'rolling_log_diff_10.png', dpi=1000)
+# plt.show()
+# # 25 log diff
+# fig, (ax1, ax2) = plt.subplots(2, 1)
+# fig.suptitle('25 Log Diff ')
+# ax1.plot(log_diff_25_mean_var.index, log_diff_25_mean_var['Rolling Mean'])
+# ax1.set_ylabel('Rolling Mean')
+# ax2.plot(log_diff_25_mean_var.index, log_diff_25_mean_var['Rolling Variance'])
+# ax2.set_xlabel('Date')
+# ax2.set_ylabel('Rolling Variance')
+# plt.savefig(image_folder+'rolling_log_diff_25.png', dpi=1000)
+# plt.show()
+# # 50 log diff
+# fig, (ax1, ax2) = plt.subplots(2, 1)
+# fig.suptitle('50 Log Diff ')
+# ax1.plot(log_diff_50_mean_var.index, log_diff_50_mean_var['Rolling Mean'])
+# ax1.set_ylabel('Rolling Mean')
+# ax2.plot(log_diff_50_mean_var.index, log_diff_50_mean_var['Rolling Variance'])
+# ax2.set_xlabel('Date')
+# ax2.set_ylabel('Rolling Variance')
+# plt.savefig(image_folder+'rolling_log_diff_50.png', dpi=1000)
+# plt.show()
+# #150 log diff
+# fig, (ax1, ax2) = plt.subplots(2, 1)
+# fig.suptitle('150 Log Diff ')
+# ax1.plot(log_diff_150_mean_var.index, log_diff_150_mean_var['Rolling Mean'])
+# ax1.set_ylabel('Rolling Mean')
+# ax2.plot(log_diff_150_mean_var.index, log_diff_150_mean_var['Rolling Variance'])
+# ax2.set_xlabel('Date')
+# ax2.set_ylabel('Rolling Variance')
+# plt.savefig(image_folder+'rolling_log_diff_150.png', dpi=1000)
+# plt.show()
+# #300 log diff
+# fig, (ax1, ax2) = plt.subplots(2, 1)
+# fig.suptitle('300 Log Diff ')
+# ax1.plot(log_diff_300_mean_var.index, log_diff_300_mean_var['Rolling Mean'])
+# ax1.set_ylabel('Rolling Mean')
+# ax2.plot(log_diff_300_mean_var.index, log_diff_300_mean_var['Rolling Variance'])
+# ax2.set_xlabel('Date')
+# ax2.set_ylabel('Rolling Variance')
+# plt.savefig(image_folder+'rolling_log_diff_300.png', dpi=1000)
+# plt.show()
+# #%%
 
 
 
 
-# Time Series Decomposition
-acf = sm.tsa.stattools.acf(diff_combined_df['150_diff'], nlags=lags)
-pacf = sm.tsa.stattools.pacf(diff_combined_df['150_diff'], nlags=lags)
-fig = plt.figure()
-plt.subplot(211)
-plt.title('ACF/PACF of the raw data')
-plot_acf(diff_combined_df['150_diff'], ax=plt.gca(), lags=lags)
-plt.subplot(212)
-plot_pacf(diff_combined_df['150_diff'], ax=plt.gca(), lags=lags)
-fig.tight_layout(pad=3)
-plt.savefig(image_folder+'Decomposition-150-ACF-PACF-Original.png', dpi=1000)
-plt.show()  
-stem_acf('Appliances',acf_df(diff_combined_df['150_diff'],300),19735)
-###################
-res = STL(df.Appliances,period=10).fit()
-fig = res.plot()
-plt.title('Original')
-plt.ylabel('Residual')
-plt.xlabel('Iterations')
-plt.tight_layout()
-plt.savefig(image_folder+'Original-Decomposition.png', dpi=1000)
-plt.show()
-
-res = STL(diff_combined_df['150_diff'],period=10).fit()
-fig = res.plot()
-plt.title('150 Diff')
-plt.ylabel('Residual')
-plt.xlabel('Iterations')
-plt.tight_layout()
-plt.savefig(image_folder+'150Diff-Decomposition.png', dpi=1000)
-plt.show()
-
-origin_stl = STL(df.Appliances,period=10)
-res = origin_stl.fit()
 
 
+# # Time Series Decomposition
+# acf = sm.tsa.stattools.acf(diff_combined_df['150_diff'], nlags=lags)
+# pacf = sm.tsa.stattools.pacf(diff_combined_df['150_diff'], nlags=lags)
+# fig = plt.figure()
+# plt.subplot(211)
+# plt.title('ACF/PACF of the raw data')
+# plot_acf(diff_combined_df['150_diff'], ax=plt.gca(), lags=lags)
+# plt.subplot(212)
+# plot_pacf(diff_combined_df['150_diff'], ax=plt.gca(), lags=lags)
+# fig.tight_layout(pad=3)
+# plt.savefig(image_folder+'Decomposition-150-ACF-PACF-Original.png', dpi=1000)
+# plt.show()  
+# stem_acf('Appliances',acf_df(diff_combined_df['150_diff'],300),19735)
+# ###################
+# res = STL(df.Appliances,period=10).fit()
+# fig = res.plot()
+# plt.title('Original')
+# plt.ylabel('Residual')
+# plt.xlabel('Iterations')
+# plt.tight_layout()
+# plt.savefig(image_folder+'Original-Decomposition.png', dpi=1000)
+# plt.show()
+
+# res = STL(diff_combined_df['150_diff'],period=10).fit()
+# fig = res.plot()
+# plt.title('150 Diff')
+# plt.ylabel('Residual')
+# plt.xlabel('Iterations')
+# plt.tight_layout()
+# plt.savefig(image_folder+'150Diff-Decomposition.png', dpi=1000)
+# plt.show()
+
+# origin_stl = STL(df.Appliances,period=10)
+# res = origin_stl.fit()
 
 
-origin_SOT=strength_of_trend(res.resid,res.trend)
-origin_season = strength_of_seasonal(res.resid,res.seasonal)
-
-diff_stl = STL(diff_combined_df['150_diff'],period=10)
-res = diff_stl.fit()
 
 
-diff_SOT=strength_of_trend(res.resid,res.trend)
-diff_season = strength_of_seasonal(res.resid,res.seasonal)
+# origin_SOT=strength_of_trend(res.resid,res.trend)
+# origin_season = strength_of_seasonal(res.resid,res.seasonal)
 
-plt.figure()
-plt.plot(df.index,res.trend, label= 'Trend')
-plt.plot(df.index,res.resid, label= 'Residual')
-plt.plot(df.index,res.seasonal, label= 'Seasonal')
-plt.title('Trend, Residual, and Seasonal Plot')
-plt.xticks(df.index[::4500], fontsize= 10)
-plt.ylabel('Electricity (Wh)')
-plt.xlabel('Time')
-plt.legend()
-plt.tight_layout()
-plt.savefig(image_folder+'Cleaner-150-Decomposition.png', dpi=1000)
-plt.show()
+# diff_stl = STL(diff_combined_df['150_diff'],period=10)
+# res = diff_stl.fit()
 
-adjusted_seasonal = np.subtract(np.array(df.Appliances),np.array(res.seasonal))
-detrended = np.subtract(np.array(df.Appliances),np.array(res.trend))
-residual = np.array(res.resid)
-adjust_seas = np.array(adjusted_seasonal)
 
-plt.figure()
-plt.plot(df.index,df.Appliances, label= 'Original Data', color = 'black')
-plt.plot(df.index,adjusted_seasonal, label= 'Adjusted Seasonal', color = 'yellow')
-plt.xticks(df.index[::4500], fontsize= 10)
-plt.title('Seasonaly Adjusted Data vs. Differenced')
-plt.xlabel('Date')
-plt.ylabel('Electricity (Wh)')
-plt.legend()
-plt.tight_layout()
-plt.savefig(image_folder+'Seasonal-Adjusted-Decomposition.png', dpi=1000)
-plt.show()
+# diff_SOT=strength_of_trend(res.resid,res.trend)
+# diff_season = strength_of_seasonal(res.resid,res.seasonal)
 
-plt.figure()
-plt.plot(df.index,df.Appliances, label= 'Original Data')
-plt.plot(df.index,detrended, label= 'Detrended')
-plt.xticks(df.index[::4500], fontsize= 10)
-plt.title('Detrended vs. Original')
-plt.xlabel('Date')
-plt.ylabel('Electricity (Wh)')
-plt.legend()
-plt.tight_layout()
-plt.savefig(image_folder+'Detrended-Decomposition.png', dpi=1000)
-plt.show()
+# plt.figure()
+# plt.plot(df.index,res.trend, label= 'Trend')
+# plt.plot(df.index,res.resid, label= 'Residual')
+# plt.plot(df.index,res.seasonal, label= 'Seasonal')
+# plt.title('Trend, Residual, and Seasonal Plot')
+# plt.xticks(df.index[::4500], fontsize= 10)
+# plt.ylabel('Electricity (Wh)')
+# plt.xlabel('Time')
+# plt.legend()
+# plt.tight_layout()
+# plt.savefig(image_folder+'Cleaner-150-Decomposition.png', dpi=1000)
+# plt.show()
+# #
+# adjusted_seasonal = np.subtract(np.array(df.Appliances),np.array(res.seasonal))
+# detrended = np.subtract(np.array(df.Appliances),np.array(res.trend))
+# residual = np.array(res.resid)
+# adjust_seas = np.array(adjusted_seasonal)
+
+# plt.figure()
+# plt.plot(df.index,df.Appliances, label= 'Original Data', color = 'black')
+# plt.plot(df.index,adjusted_seasonal, label= 'Adjusted Seasonal', color = 'yellow')
+# plt.xticks(df.index[::4500], fontsize= 10)
+# plt.title('Seasonaly Adjusted Data vs. Differenced')
+# plt.xlabel('Date')
+# plt.ylabel('Electricity (Wh)')
+# plt.legend()
+# plt.tight_layout()
+# plt.savefig(image_folder+'Seasonal-Adjusted-Decomposition.png', dpi=1000)
+# plt.show()
+
+# plt.figure()
+# plt.plot(df.index,df.Appliances, label= 'Original Data')
+# plt.plot(df.index,detrended, label= 'Detrended')
+# plt.xticks(df.index[::4500], fontsize= 10)
+# plt.title('Detrended vs. Original')
+# plt.xlabel('Date')
+# plt.ylabel('Electricity (Wh)')
+# plt.legend()
+# plt.tight_layout()
+# plt.savefig(image_folder+'Detrended-Decomposition.png', dpi=1000)
+# plt.show()
 
 ####
 # ####Holt-Winters
@@ -501,7 +502,7 @@ fig.tight_layout(pad=3)
 plt.savefig(image_folder+'HW-Train-PACF.png', dpi=1000)
 plt.show() 
 
-stem_acf('HW',acf_df(hw_train,300),19735)
+stem_acf('HW',acf_df(hw_train,90),19735)
 
 # holt winter test data
 acf = sm.tsa.stattools.acf(test_hw.Appliances, nlags=lags)
@@ -565,6 +566,225 @@ print(" the condition number for X is = ", LA.cond(x_trainer))
 print(features)
 
 
+
+######## 
+# Base Models
+# Starting with average
+avg_predict= h_step_average_method(df_train['Appliances'],df_test['Appliances'])
+
+plt.figure()
+plt.plot(df_train.index,df_train.Appliances,label= "Train Data", color = 'green')
+plt.xticks(df.index[::4500], rotation= 90, fontsize= 10)
+plt.plot(df_test.index,df_test.Appliances,label= "Test Data", color = 'blue')
+plt.plot(df_test.index, avg_predict, label = 'Average Method', color = 'pink')
+plt.xlabel('Time')
+plt.ylabel('Electricity (Wh)')
+plt.title('Average Method on Electricity (Wh)')
+plt.legend()
+plt.tight_layout()
+plt.savefig(image_folder+'Average-train-test-predict.png', dpi=1000)
+plt.show()
+
+
+
+plt.figure()
+plt.plot(df_test.index,df_test.Appliances,label= "Test Data", color = 'red')
+plt.plot(df_test.index, avg_predict, label = 'Average Method', color = 'yellow')
+plt.xticks(df_test.index[::725], fontsize= 10)
+plt.xlabel('Time')
+plt.ylabel('Electricity (Wh)')
+plt.title('Average Method on Electricity (Wh)')
+plt.legend()
+plt.tight_layout()
+plt.savefig(image_folder+'Average-test-predict.png', dpi=1000)
+plt.show()
+
+
+
+predict,forcast = average_prediction(df_train['Appliances'],len(df))
+
+#train
+one_step_predict =np.array(predict)
+yarray = np.array(df_train.Appliances[1:])
+avg_yt_error = np.subtract(one_step_predict[2:],yarray)
+print("Mean square error for train:", mse(avg_yt_error).round(4))
+
+avg_yf_error = np.array(df_test.Appliances) - np.array(avg_predict)
+print("Mean square error for test:", mse(avg_yf_error).round(4))
+
+# Average method statistics
+print('variance of the error:', np.var(avg_yt_error))
+print('the RMSE of the Average forecasting model error is, ', mean_squared_error(df_test['Appliances'], np.array(avg_predict), squared=False))
+print('the mean of the Average forecasting  model error is', np.mean(avg_yf_error))
+print(sm.stats.acorr_ljungbox(avg_yf_error, lags=[5], boxpierce=True, return_df=True))
+
+
+stem_acf('average_method',acf_df(avg_yf_error,90),len(df_train))
+plt.savefig(image_folder+'Stem-ACF-Average-Err.png', dpi=1000)
+
+
+
+# naive method
+naive_predict= h_step_naive_method(df_train.Appliances,df_test.Appliances)
+
+
+
+plt.figure()
+plt.plot(df_train.index,df_train.Appliances,label= "Train Data", color = 'blue')
+plt.plot(df_test.index, df_test.Appliances,label= "Test Data", color = 'red')
+plt.plot(df_test.index, naive_predict, label = 'Naive Method', color = 'yellow')
+plt.xticks(df.index[::4500], rotation= 90, fontsize= 10)
+plt.xlabel('Time')
+plt.ylabel('Electricity (Wh)')
+plt.title('Naive Method on Electricity (Wh)')
+plt.legend()
+plt.tight_layout()
+plt.savefig(image_folder+'Naive-train-test-predict.png', dpi=1000)
+plt.show()
+
+plt.figure()
+plt.plot(df_test.index, df_test.Appliances,label= "Test Data", color = 'red')
+plt.plot(df_test.index, naive_predict, label = 'Naive Method', color = 'yellow')
+plt.xticks(df_test.index[::725], fontsize= 10)
+plt.xlabel('Time')
+plt.ylabel('Electricity (Wh)')
+plt.title('Naive Method on Electricity (Wh)')
+plt.legend()
+plt.tight_layout()
+plt.savefig(image_folder+'Naive-test-predict.png', dpi=1000)
+plt.show()
+
+
+#train
+naive_error = np.array(df_train.Appliances[1:]) - np.array(one_step_naive_method(df_train.Appliances))
+print("Mean square error for the Naive method training set is ", mse(naive_error))
+#forecast
+N_yf_error = np.array(df_test.Appliances) - np.array(naive_predict)
+print("Mean square error for the Naive method testing set is ", mse(naive_error))
+
+# Q6d: Naive method statistics
+print('the Variance of the error of the Naive method training set is ', np.var(naive_error))
+print('the Variance of the error of the Naive method testing set is ', np.var(naive_error))
+print('the RMSE of the Naive model forecasting error is, ', mean_squared_error(df_test['Appliances'], np.array(naive_predict), squared=False))
+print('the mean of the Naive model forecasting error is', np.mean(naive_error))
+print(sm.stats.acorr_ljungbox(N_yf_error, lags=[5], boxpierce=True, return_df=True))
+print('The Q value was found to be 5014.178759  with a p-value of 0.0')
+print('the variance for the prediction error appeared less than the variance of the forecasting error')
+
+
+stem_acf('naive_method',acf_df(naive_error,90),len(df_train))
+plt.savefig(image_folder+'Stem-ACF-Naive-Err.png', dpi=1000)
+
+# drift method
+one_step_predict =one_step_drift_method(df_train.Appliances)
+h_step_predict = h_step_drift_method(df_train.Appliances,df_test.Appliances)
+
+# Q7b: plot train, test, and drift
+
+plt.figure()
+plt.plot(df_train.index,df_train.Appliances,label= "Train Data", color = 'blue')
+plt.plot(df_test.index, df_test.Appliances,label= "Test Data", color = 'red')
+plt.plot(df_test.index, one_step_predict[len(df_train)-len(df_test)-1:], label = 'Drift Method', color = 'yellow')
+plt.xticks(df.index[::4500], rotation= 90, fontsize= 10)
+plt.xlabel('Time')
+plt.ylabel('Electricity (Wh)')
+plt.title('Drift Method on Electricity (Wh)')
+plt.legend()
+plt.tight_layout()
+plt.savefig(image_folder+'Drift-Train-Test-Predict.png', dpi=1000)
+plt.show()
+
+plt.figure()
+plt.plot(df_test.index, df_test.Appliances,label= "Test Data", color = 'red')
+plt.plot(df_test.index, one_step_predict[len(df_train)-len(df_test)-1:], label = 'Drift Method', color = 'yellow')
+plt.xticks(df_test.index[::725], fontsize= 10)
+plt.xlabel('Time')
+plt.ylabel('Electricity (Wh)')
+plt.title('Drift Method on Electricity (Wh)')
+plt.legend()
+plt.tight_layout()
+plt.savefig(image_folder+'Drift-Test-Predict.png', dpi=1000)
+plt.show()
+
+
+
+#train
+drift_yt_error = np.subtract(np.array(df_train.Appliances[1:]),np.array(one_step_drift_method(df_train.Appliances)))
+print("Mean square error for the drift method training set is ", mse(drift_yt_error))
+#forecast
+drift_yf_error = np.subtract(np.array(df_test.Appliances)[1:],np.array(one_step_drift_method(df_test.Appliances)))
+print("Mean square error for the drift method testing set is ", mse(drift_yf_error))
+
+# Q7d: drift method variance
+# Q6d: Naive method statistics
+print('the Variance of the error of the Drift method training set is ', np.var(drift_yt_error))
+print('the Variance of the error of the Drift method testing set is ', np.var(drift_yf_error))
+print('the RMSE of the Drift model forecasting error is, ', mean_squared_error(df_test['Appliances'], np.array(one_step_predict)[len(df_train)-len(df_test)-1:], squared=False))
+print('the mean of the Drift model forecasting error is', np.mean(drift_yf_error))
+print(sm.stats.acorr_ljungbox(drift_yf_error, lags=[5], boxpierce=True, return_df=True))
+print('The Q value was found to be 5129.25267 with a p-value of 0.0')
+print('the variance for the prediction error appeared less than the variance of the forecasting error')
+
+
+
+stem_acf('drift-error',acf_df(drift_yf_error,90),len(df_train))
+plt.savefig(image_folder+'Stem-ACF-Drift-Err.png', dpi=1000)
+
+# Seasonal exponential smoothing
+
+# Q8a: see report
+
+holtt = ets.ExponentialSmoothing(df_train.Appliances,trend=None,damped_trend=False,seasonal=None).fit(smoothing_level=0.5)
+holtf = holtt.forecast(steps=len(df_test))
+holtf = pd.DataFrame(holtf)
+
+
+#plot train, test, and SES
+
+plt.figure()
+plt.plot(df_train.index,df_train.Appliances,label= "Train Data", color = 'blue')
+plt.plot(df_test.index, df_test.Appliances,label= "Test Data", color = 'red')
+plt.plot(df_test.index, np.array(holtf), label = 'SES Method', color = 'yellow')
+plt.xticks(df.index[::4500], rotation= 90, fontsize= 10)
+plt.xlabel('Date')
+plt.ylabel('Appliances (Wh)')
+plt.title('SES Method on Appliances(Wh)')
+plt.legend()
+plt.tight_layout()
+plt.show()
+
+plt.figure()
+plt.plot(df_test.index, df_test.Appliances,label= "Test Data", color = 'red')
+plt.plot(df_test.index, np.array(holtf), label = 'SES Method', color = 'yellow')
+plt.xticks(df_test.index[::725], fontsize= 10)
+plt.xlabel('Date')
+plt.ylabel('Appliances (Wh)')
+plt.title('SES Method on Appliances(Wh)')
+plt.legend()
+plt.tight_layout()
+plt.show()
+
+
+#train
+
+SES_yt_error = np.subtract(np.array(df_train.Appliances), SES_train(df_train.Appliances,.5))
+print("Mean square error for the SES method training set is ", mse(SES_yt_error))
+#forecast
+holtf = holtt.forecast(steps=len(df_test.Appliances))
+holtf = pd.DataFrame(holtf)
+SES_yf_error = np.subtract(np.array(df_test.Appliances), holtf[0])
+print("the mean square error for the SES method testing set is ", mse(SES_yf_error))
+print('the Variance of the error of the SES method training set is ', np.var(SES_yt_error))
+print('the Variance of the error of the SES method testing set is ', np.var(SES_yf_error))
+print('the RMSE of the SES model forecasting error is, ', mean_squared_error(df_test['Appliances'], holtf[0], squared=False))
+print('the mean of the SES model forecasting error is', np.mean(SES_yf_error))
+print(sm.stats.acorr_ljungbox(SES_yf_error, lags=[5], boxpierce=True, return_df=True))
+print('The Q value was found to be 5014.178759 with a p-value of 0.0')
+print('The variance of the prediction error appeared less than the variance of the forecasting error')
+
+
+stem_acf('SES-error',acf_df(SES_yf_error,90),len(df_train))
+plt.savefig(image_folder+'Stem-ACF-SES-Err.png', dpi=1000)
 
 
 
