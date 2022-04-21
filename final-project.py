@@ -34,6 +34,7 @@ del df['rv1']
 del df['rv2']
 df['Date']=pd.to_datetime(df_raw['date'])
 df.set_index('Date', inplace = True)
+df_undiff = df.copy()
 
 ### Dataset Cleaning
 df_na = df[df.isnull().any(axis=1)]
@@ -69,7 +70,7 @@ fig.tight_layout(pad=3)
 plt.savefig(image_folder+'1c-ACF-PACF-Original.png', dpi=1000)
 plt.show()  
 # Stem plot TODO :make symmetric
-stem_acf('Appliances',acf_df(df.Appliances,300),19735)
+stem_acf('Original-Appliances',acf_df(df.Appliances,300),19735)
 ###################
 # 1d. Correlation Matrix + Heatmap
 corr = df.corr()
@@ -334,112 +335,133 @@ plt.show()
 # ax2.set_ylabel('Rolling Variance')
 # plt.savefig(image_folder+'rolling_log_diff_300.png', dpi=1000)
 # plt.show()
-# #%%
+#%%
+##############################
+# Using differenced data in y from now on
+diff_df=diff(df.Appliances,144,df.index).copy()
+df['Appliances'] = diff_df['144_diff'].copy()
+
+#### Using differenced data exclusively now
+index_80 = int(len(df)*0.8)
+index_20 = int(len(df)-index_80)
+df_train = df[:index_80]
+df_test = df[index_80:]
+log_diff_df = pd.read_csv('log_diff_df.csv')
+diff_combined_df= pd.read_csv('diff_combined_df.csv')
+
+
+
+# Time Series Decomposition
+acf = sm.tsa.stattools.acf(diff_combined_df['150_diff'], nlags=lags)
+pacf = sm.tsa.stattools.pacf(diff_combined_df['150_diff'], nlags=lags)
+fig = plt.figure()
+plt.subplot(211)
+plt.title('ACF/PACF of the raw data')
+plot_acf(diff_combined_df['150_diff'], ax=plt.gca(), lags=lags)
+plt.subplot(212)
+plot_pacf(diff_combined_df['150_diff'], ax=plt.gca(), lags=lags)
+fig.tight_layout(pad=3)
+plt.savefig(image_folder+'Decomposition-150-ACF-PACF-Original.png', dpi=1000)
+plt.show()  
+stem_acf('Appliances-150-diff-ACF',acf_df(diff_combined_df['150_diff'],300),19735)
+###################
+res = STL(df.Appliances,period=10).fit()
+fig = res.plot()
+plt.title('Original')
+plt.ylabel('Residual')
+plt.xlabel('Iterations')
+plt.tight_layout()
+plt.savefig(image_folder+'Original-Decomposition.png', dpi=1000)
+plt.show()
+
+res = STL(diff_combined_df['150_diff'],period=10).fit()
+fig = res.plot()
+plt.title('150 Diff')
+plt.ylabel('Residual')
+plt.xlabel('Iterations')
+plt.tight_layout()
+plt.savefig(image_folder+'150Diff-Decomposition.png', dpi=1000)
+plt.show()
+
+origin_stl = STL(df.Appliances,period=10)
+res = origin_stl.fit()
 
 
 
 
+origin_SOT=strength_of_trend(res.resid,res.trend)
+origin_season = strength_of_seasonal(res.resid,res.seasonal)
+
+diff_stl = STL(diff_combined_df['150_diff'],period=10)
+res = diff_stl.fit()
 
 
-# # Time Series Decomposition
-# acf = sm.tsa.stattools.acf(diff_combined_df['150_diff'], nlags=lags)
-# pacf = sm.tsa.stattools.pacf(diff_combined_df['150_diff'], nlags=lags)
-# fig = plt.figure()
-# plt.subplot(211)
-# plt.title('ACF/PACF of the raw data')
-# plot_acf(diff_combined_df['150_diff'], ax=plt.gca(), lags=lags)
-# plt.subplot(212)
-# plot_pacf(diff_combined_df['150_diff'], ax=plt.gca(), lags=lags)
-# fig.tight_layout(pad=3)
-# plt.savefig(image_folder+'Decomposition-150-ACF-PACF-Original.png', dpi=1000)
-# plt.show()  
-# stem_acf('Appliances',acf_df(diff_combined_df['150_diff'],300),19735)
-# ###################
-# res = STL(df.Appliances,period=10).fit()
-# fig = res.plot()
-# plt.title('Original')
-# plt.ylabel('Residual')
-# plt.xlabel('Iterations')
-# plt.tight_layout()
-# plt.savefig(image_folder+'Original-Decomposition.png', dpi=1000)
-# plt.show()
+diff_SOT=strength_of_trend(res.resid,res.trend)
+diff_season = strength_of_seasonal(res.resid,res.seasonal)
 
-# res = STL(diff_combined_df['150_diff'],period=10).fit()
-# fig = res.plot()
-# plt.title('150 Diff')
-# plt.ylabel('Residual')
-# plt.xlabel('Iterations')
-# plt.tight_layout()
-# plt.savefig(image_folder+'150Diff-Decomposition.png', dpi=1000)
-# plt.show()
+plt.figure()
+plt.plot(df.index,res.trend, label= 'Trend')
+plt.plot(df.index,res.resid, label= 'Residual')
+plt.plot(df.index,res.seasonal, label= 'Seasonal')
+plt.title('Trend, Residual, and Seasonal Plot')
+plt.xticks(df.index[::4500], fontsize= 10)
+plt.ylabel('Electricity (Wh)')
+plt.xlabel('Time')
+plt.legend()
+plt.tight_layout()
+plt.savefig(image_folder+'Cleaner-150-Decomposition.png', dpi=1000)
+plt.show()
+#
+adjusted_seasonal = np.subtract(np.array(df.Appliances),np.array(res.seasonal))
+detrended = np.subtract(np.array(df.Appliances),np.array(res.trend))
+residual = np.array(res.resid)
+adjust_seas = np.array(adjusted_seasonal)
 
-# origin_stl = STL(df.Appliances,period=10)
-# res = origin_stl.fit()
+plt.figure()
+plt.plot(df.index,df.Appliances, label= 'Original Data', color = 'black')
+plt.plot(df.index,adjusted_seasonal, label= 'Adjusted Seasonal', color = 'yellow')
+plt.xticks(df.index[::4500], fontsize= 10)
+plt.title('Seasonaly Adjusted Data vs. Differenced')
+plt.xlabel('Date')
+plt.ylabel('Electricity (Wh)')
+plt.legend()
+plt.tight_layout()
+plt.savefig(image_folder+'Seasonal-Adjusted-Decomposition.png', dpi=1000)
+plt.show()
 
-
-
-
-# origin_SOT=strength_of_trend(res.resid,res.trend)
-# origin_season = strength_of_seasonal(res.resid,res.seasonal)
-
-# diff_stl = STL(diff_combined_df['150_diff'],period=10)
-# res = diff_stl.fit()
-
-
-# diff_SOT=strength_of_trend(res.resid,res.trend)
-# diff_season = strength_of_seasonal(res.resid,res.seasonal)
-
-# plt.figure()
-# plt.plot(df.index,res.trend, label= 'Trend')
-# plt.plot(df.index,res.resid, label= 'Residual')
-# plt.plot(df.index,res.seasonal, label= 'Seasonal')
-# plt.title('Trend, Residual, and Seasonal Plot')
-# plt.xticks(df.index[::4500], fontsize= 10)
-# plt.ylabel('Electricity (Wh)')
-# plt.xlabel('Time')
-# plt.legend()
-# plt.tight_layout()
-# plt.savefig(image_folder+'Cleaner-150-Decomposition.png', dpi=1000)
-# plt.show()
-# #
-# adjusted_seasonal = np.subtract(np.array(df.Appliances),np.array(res.seasonal))
-# detrended = np.subtract(np.array(df.Appliances),np.array(res.trend))
-# residual = np.array(res.resid)
-# adjust_seas = np.array(adjusted_seasonal)
-
-# plt.figure()
-# plt.plot(df.index,df.Appliances, label= 'Original Data', color = 'black')
-# plt.plot(df.index,adjusted_seasonal, label= 'Adjusted Seasonal', color = 'yellow')
-# plt.xticks(df.index[::4500], fontsize= 10)
-# plt.title('Seasonaly Adjusted Data vs. Differenced')
-# plt.xlabel('Date')
-# plt.ylabel('Electricity (Wh)')
-# plt.legend()
-# plt.tight_layout()
-# plt.savefig(image_folder+'Seasonal-Adjusted-Decomposition.png', dpi=1000)
-# plt.show()
-
-# plt.figure()
-# plt.plot(df.index,df.Appliances, label= 'Original Data')
-# plt.plot(df.index,detrended, label= 'Detrended')
-# plt.xticks(df.index[::4500], fontsize= 10)
-# plt.title('Detrended vs. Original')
-# plt.xlabel('Date')
-# plt.ylabel('Electricity (Wh)')
-# plt.legend()
-# plt.tight_layout()
-# plt.savefig(image_folder+'Detrended-Decomposition.png', dpi=1000)
-# plt.show()
-
-####
+plt.figure()
+plt.plot(df.index,df.Appliances, label= 'Original Data')
+plt.plot(df.index,detrended, label= 'Detrended')
+plt.xticks(df.index[::4500], fontsize= 10)
+plt.title('Detrended vs. Original')
+plt.xlabel('Date')
+plt.ylabel('Electricity (Wh)')
+plt.legend()
+plt.tight_layout()
+plt.savefig(image_folder+'Detrended-Decomposition.png', dpi=1000)
+plt.show()
+#
+#%%
 # ####Holt-Winters
-model = ets.ExponentialSmoothing(df['Appliances'], damped_trend= True, seasonal_periods=288, trend='add', seasonal='add').fit()
+model = ets.ExponentialSmoothing(df_undiff['Appliances'], seasonal_periods=144, trend='add', seasonal='add').fit()
 
 # prediction on train set
-hw_train = model.forecast(steps=len(df_train['Appliances']))
+hw_train = model.forecast(steps=df_train.shape[0])
+hw_train_mean_var = cal_rolling_mean_var(hw_train)
+fig, (ax1, ax2) = plt.subplots(2, 1)
+fig.suptitle('Original Data')
+ax1.plot(hw_train_mean_var.index, hw_train_mean_var['Rolling Mean'])
+ax1.set_ylabel('Rolling Mean')
+ax2.plot(hw_train_mean_var.index, hw_train_mean_var['Rolling Variance'])
+ax2.set_xlabel('Date')
+ax2.set_ylabel('Rolling Variance')
+#plt.savefig(image_folder+'rolling_original.png', dpi=1000)
+plt.show()
+#%%
+#
 train_hw = pd.DataFrame(hw_train, columns=['Appliances']).set_index(df_train.index)
 
-hw_test = model.forecast(steps=len(df_test['Appliances']))
+hw_test = model.forecast(steps=df_test.shape[0])
 test_hw = pd.DataFrame(hw_test, columns=['Appliances']).set_index(df_test.index)
 
 
@@ -474,7 +496,7 @@ plt.xticks(df.index[::4500], fontsize= 10)
 plt.legend()
 plt.savefig(image_folder+'HW-Train-Test-Predict.png', dpi=1000)
 plt.show()
-
+#%%
 
 # plot of test data
 plt.figure()
@@ -502,7 +524,7 @@ fig.tight_layout(pad=3)
 plt.savefig(image_folder+'HW-Train-PACF.png', dpi=1000)
 plt.show() 
 
-stem_acf('HW',acf_df(hw_train,90),19735)
+stem_acf('H-W-Train',acf_df(hw_train,90),19735)
 
 # holt winter test data
 acf = sm.tsa.stattools.acf(test_hw.Appliances, nlags=lags)
@@ -516,57 +538,7 @@ plot_pacf(test_hw.Appliances, ax=plt.gca(), lags=lags)
 fig.tight_layout(pad=3)
 plt.savefig(image_folder+'HW-Test_PACF.png', dpi=1000)
 plt.show()  
-
-
-###### Backwords Selection
-features = []
-x_train = df_train.drop(columns=['Appliances'])
-y_train = df_train.Appliances
-x_train_ols = sm.add_constant(x_train)
-OLS_model = sm.OLS(y_train, x_train_ols)
-OLS_fit = OLS_model.fit()
-print(OLS_fit.summary())
-OLS_coefficients = OLS_fit.params
-initial_aic_bic_rsquared = aic_bic_rsquared_df(OLS_fit)
-
-def loop_backwards(x,y,df):
-    fit = sm.OLS(y, x).fit()
-    remove_this_feature = worst_feature(fit.pvalues)
-    print(remove_this_feature)
-    features.append(remove_this_feature)
-    new_x = new_x_train(remove_this_feature,x)
-    new_x_df = aic_bic_rsquared_df(sm.OLS(y_train, new_x).fit())
-    new_df = pd.concat([df, new_x_df])
-    return new_df,new_x
-
-newer_df, newer_x = loop_backwards(x_train,y_train,initial_aic_bic_rsquared)
-newer_df, newer_x = loop_backwards(newer_x,y_train,newer_df)
-newer_df, newer_x = loop_backwards(newer_x,y_train,newer_df)
-newer_df, newer_x = loop_backwards(newer_x,y_train,newer_df)
-newer_df, newer_x = loop_backwards(newer_x,y_train,newer_df)
-newer_df, newer_x = loop_backwards(newer_x,y_train,newer_df)
-newer_df, newer_x = loop_backwards(newer_x,y_train,newer_df)
-newer_df, newer_x = loop_backwards(newer_x,y_train,newer_df)
-newer_df, newer_x = loop_backwards(newer_x,y_train,newer_df)
-newer_df, newer_x = loop_backwards(newer_x,y_train,newer_df)
-newer_df, newer_x = loop_backwards(newer_x,y_train,newer_df)
-newer_df, newer_x = loop_backwards(newer_x,y_train,newer_df)
-newer_df, newer_x = loop_backwards(newer_x,y_train,newer_df)
-features.append(newer_x.columns[0])
-newer_df['feature_to_drop'] = features
-
-
-x_trainer = sm.add_constant(x_train)
-H = np.matmul(x_trainer.T,x_trainer)
-print('This is H dim', H.shape)
-s,d,v = np.linalg.svd(H)
-print('SingularValues = ', d)
-#Condition number
-print(" the condition number for X is = ", LA.cond(x_trainer))
-print(features)
-
-
-
+#%%
 ######## 
 # Base Models
 # Starting with average
@@ -619,8 +591,8 @@ print('the mean of the Average forecasting  model error is', np.mean(avg_yf_erro
 print(sm.stats.acorr_ljungbox(avg_yf_error, lags=[5], boxpierce=True, return_df=True))
 
 
-stem_acf('average_method',acf_df(avg_yf_error,90),len(df_train))
-plt.savefig(image_folder+'Stem-ACF-Average-Err.png', dpi=1000)
+stem_acf('Average-Error-ACF',acf_df(avg_yf_error,90),len(df_train))
+
 
 
 
@@ -672,8 +644,8 @@ print('The Q value was found to be 5014.178759  with a p-value of 0.0')
 print('the variance for the prediction error appeared less than the variance of the forecasting error')
 
 
-stem_acf('naive_method',acf_df(naive_error,90),len(df_train))
-plt.savefig(image_folder+'Stem-ACF-Naive-Err.png', dpi=1000)
+stem_acf('Stem-ACF-Naive-Err',acf_df(naive_error,90),len(df_train))
+
 
 # drift method
 one_step_predict =one_step_drift_method(df_train.Appliances)
@@ -727,8 +699,7 @@ print('the variance for the prediction error appeared less than the variance of 
 
 
 
-stem_acf('drift-error',acf_df(drift_yf_error,90),len(df_train))
-plt.savefig(image_folder+'Stem-ACF-Drift-Err.png', dpi=1000)
+stem_acf('drift-Stem-ACF-Drift-Err',acf_df(drift_yf_error,90),len(df_train))
 
 # Seasonal exponential smoothing
 
@@ -751,6 +722,7 @@ plt.ylabel('Appliances (Wh)')
 plt.title('SES Method on Appliances(Wh)')
 plt.legend()
 plt.tight_layout()
+plt.savefig(image_folder+'SES-Train-Test-Predict.png', dpi=1000)
 plt.show()
 
 plt.figure()
@@ -762,6 +734,7 @@ plt.ylabel('Appliances (Wh)')
 plt.title('SES Method on Appliances(Wh)')
 plt.legend()
 plt.tight_layout()
+plt.savefig(image_folder+'SES-Test-Predict.png', dpi=1000)
 plt.show()
 
 
@@ -783,22 +756,158 @@ print('The Q value was found to be 5014.178759 with a p-value of 0.0')
 print('The variance of the prediction error appeared less than the variance of the forecasting error')
 
 
-stem_acf('SES-error',acf_df(SES_yf_error,90),len(df_train))
-plt.savefig(image_folder+'Stem-ACF-SES-Err.png', dpi=1000)
+stem_acf('Stem-ACF-SES-Err',acf_df(SES_yf_error,90),len(df_train))
+
+###############
+# Doing Backwards regression and multiple linear regression together
+# - Develop the multiple linear regression model that represent the dataset. Check the accuracy of
+# the developed model.
+#   - You need to include the complete regression analysis into your report. - Perform one-step ahead prediction and compare the performance versus the test set.
+#   - Hypothesis tests analysis: F-test, t-test.
+#   - AIC, BIC, RMSE, R-squared and Adjusted R-squared
+#   - ACF of residuals.
+#   - Q-value
+#   - Variance and mean of the residuals.
+###### Backwords Selection
+features = []
+x_train = df_train.drop(columns=['Appliances'])
+y_train = df_train.Appliances
+#x_train_ols = sm.add_constant(x_train)
+OLS_model = sm.OLS(y_train, x_train)
+OLS_fit = OLS_model.fit()
+print(OLS_fit.summary())
+OLS_coefficients = OLS_fit.params
+initial_aic_bic_rsquared = aic_bic_rsquared_df(OLS_fit)
+
+def loop_backwards(x,y,df):
+    fit = sm.OLS(y, x).fit()
+    remove_this_feature = worst_feature(fit.pvalues)
+    print(remove_this_feature)
+    features.append(remove_this_feature)
+    new_x = new_x_train(remove_this_feature,x)
+    new_x_df = aic_bic_rsquared_df(sm.OLS(y_train, new_x).fit())
+    new_df = pd.concat([df, new_x_df])
+    return new_df,new_x
+
+newer_df, newer_x = loop_backwards(x_train,y_train,initial_aic_bic_rsquared)
+newer_df, newer_x = loop_backwards(newer_x,y_train,newer_df)
+newer_df, newer_x = loop_backwards(newer_x,y_train,newer_df)
+newer_df, newer_x = loop_backwards(newer_x,y_train,newer_df)
+newer_df, newer_x = loop_backwards(newer_x,y_train,newer_df)
+newer_df, newer_x = loop_backwards(newer_x,y_train,newer_df)
+newer_df, newer_x = loop_backwards(newer_x,y_train,newer_df)
+newer_df, newer_x = loop_backwards(newer_x,y_train,newer_df)
+newer_df, newer_x = loop_backwards(newer_x,y_train,newer_df)
+newer_df, newer_x = loop_backwards(newer_x,y_train,newer_df)
+newer_df, newer_x = loop_backwards(newer_x,y_train,newer_df)
+newer_df, newer_x = loop_backwards(newer_x,y_train,newer_df)
+newer_df, newer_x = loop_backwards(newer_x,y_train,newer_df)
+features.append(newer_x.columns[0])
+newer_df['feature_to_drop'] = features
+
+
+x_trainer = sm.add_constant(x_train)
+H = np.matmul(x_trainer.T,x_trainer)
+print('This is H dim', H.shape)
+s,d,v = np.linalg.svd(H)
+print('SingularValues = ', d)
+#Condition number
+print(" the condition number for X is = ", LA.cond(x_trainer))
+print(features)
+#%%
+# modeling after selection
+df_after_selection = df.drop(columns=features)
+df_after_selection_train = df_after_selection[:index_80]
+df_after_selection_test = df_after_selection[index_80:]
+x_train = df_after_selection.drop(columns=['Appliances'])[:index_80]
+x_test = df_after_selection.drop(columns=['Appliances'])[index_80:]
+y_train = df_after_selection.Appliances[:index_80]
+y_test = df_after_selection.Appliances[index_80:]
+x_train_ols = sm.add_constant(x_train)
+x_test_ols = sm.add_constant(x_test)
+# One Step
+OLS_model = sm.OLS(y_train, x_train_ols)
+OLS_results = OLS_model.fit()
+y_pred = OLS_results.predict(x_train_ols)
 
 
 
 
+# Forecast
+OLS_model = sm.OLS(y_train, x_train_ols)
+OLS_results = OLS_model.fit()
+y_forecast = OLS_results.predict(x_test_ols)
+residuals_multi_model = np.subtract(np.array(df_after_selection_test.Appliances),np.array(y_forecast))
+forecast = OLS_results.summary()
+
+plt.figure()
+plt.plot(df_after_selection_train.index, df_after_selection_train.Appliances, label = 'Training set')
+plt.xticks(df.index[::4500], fontsize= 10)
+plt.plot(df_after_selection_train.index, y_pred, label = 'Prediction values')
+plt.plot(df_after_selection_test.index, df_after_selection_test.Appliances, label = 'Test set')
+plt.plot(df_after_selection_test.index,y_forecast, label = 'Forecasted Values')
+plt.legend()
+plt.tight_layout()
+plt.xlabel('Date')
+plt.ylabel('Electricity (Wh)')
+plt.title('OLS model Prediction Plot')
+plt.savefig(image_folder+'OLS-Train-Test-Predict.png', dpi=1000)
+plt.show()
+
+
+plt.figure()
+plt.plot(df_after_selection_test.index, df_after_selection_test.Appliances, label = 'Test set')
+plt.xticks(df.index[::4500], fontsize= 10)
+plt.plot(df_after_selection_test.index,y_forecast, label = 'Forecasted Values')
+plt.legend()
+plt.tight_layout()
+plt.xlabel('Date')
+plt.ylabel('Electricity (Wh)')
+plt.title('OLS model Prediction-Test Plot')
+plt.savefig(image_folder+'OLS-Test-Predict.png', dpi=1000)
+plt.show()
+
+
+stem_acf('Stem-ACF-Multi-Var-Model-Prediction',acf_df(y_pred,90),len(df_train))
+stem_acf('Stem-ACF-Multi-Var-Model-Forecast',acf_df(y_forecast,90),len(df_train))
+stem_acf('Stem-ACF-Multi-Var-Model-Residuals',acf_df(residuals_multi_model,90),len(df_train))
+
+# train data
+print(f"MSE : {mse(y_pred).round(4)}")
+train_ljung = sm.stats.acorr_ljungbox(y_pred, lags=[5], boxpierce=True, return_df=True)
+print(f'The Q value was found to be {train_ljung.iloc[:,[0]]} with a p-value of {train_ljung.iloc[:,[1]]}')
+print('mean of the regression model prediction error:', np.mean(y_pred))
+print(' variance of the regression model prediction error:', np.var(y_pred))
+print(' RMSE of the regression model prediction error:, ', mean_squared_error(df_after_selection_train['Appliances'], y_pred, squared=False))
+
+# test data
+print("Mean square error for the regression method forecasting on Electricity (Wh) is ", mse(y_forecast).round(4))
+test_ljung = sm.stats.acorr_ljungbox(y_forecast, lags=[5], boxpierce=True, return_df=True)
+print(f'The Q value was found to be {test_ljung.iloc[:,[0]]} with a p-value of {train_ljung.iloc[:,[1]]}')
+print('the mean of the regression model forecasting error is', np.mean(y_forecast))
+print('the variance of the regression model forecasting error is', np.var(y_forecast))
+print('the RMSE of the regression model forecasting error is, ', mean_squared_error(df_after_selection_test['Appliances'], y_forecast.values, squared=False))
+print('the variance of the prediction error appeared larger than the variance of the testing error')
+
+#%%
+#### ARIMA Modeling
+lags = 20
+acf_train_y = sm.tsa.stattools.acf(df_train.Appliances, nlags=lags)
+
+
+# GPAC plot
+
+da_pac = gpac_matrix(acf_train_y,10,10)
+plt.figure()
+sns.heatmap(da_pac,  annot=True)
+plt.title('GPAC Table')
+plt.xlabel('k values')
+plt.ylabel('j values')
+plt.show()
 
 
 
-
-
-
-
-
-
-
+#%%
 
 
 

@@ -178,6 +178,7 @@ def stem_acf(name, df,n):
     #plt.setp(markers, color='red',markers='0')
     #plt.axhspan(-markers,markers,alpha=0.2,color='blue')
     plt.fill_between(df['lags'], (1.96 / ((n) ** (1/2))), ((-1.96) / ((n) ** (1 / 2))), color='thistle')
+    plt.savefig('final-images/'+f'{name}.png', dpi=1000)
     return plt.show()
 
 

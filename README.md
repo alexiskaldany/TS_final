@@ -23,7 +23,7 @@
   - Correlation Matrix with seaborn heatmap with the Pearson’s correlation coefficient. (done)
   - Split the dataset into train set (80%) and test set (20%). (done)
 
-- Stationarity: Check for a need to make the dependent variable stationary. If the dependent variable is not stationary, you need to use the techniques discussed in class to make it stationary.
+- Stationarity: Check for a need to make the dependent variable stationary. If the dependent variable is not stationary, you need to use the techniques discussed in class to make it stationary. (done)
 
     1. It appears the original data has the only rolling mean and rolling variance which is stationary after observing many combinations of differencing and log-differencing
     2. ADF/KPSS confirmed
@@ -35,16 +35,16 @@
 - Holt-Winters method: Using the Holt-Winters method try to find the best fit using the train dataset and make a prediction using the test set. (done)
 
 - Feature selection: You need to have a section in your report that explains how the feature selection was performed and whether the collinearity exits not. Backward stepwise regressionalong with SVD and condition number is needed. You must explain that which feature(s) need to be eliminated and why. You are welcome to use other methods like PCA or random forest for feature elimination. (done)
-- Base-models: average, naïve, drift, simple and exponential smoothing. You need to perform an h-step prediction based on the base models and compare the SARIMA model performance with the base model predication.
+- Base-models: average, naïve, drift, simple and exponential smoothing. You need to perform an h-step prediction based on the base models and compare the SARIMA model performance with the base model predication. (done)
 - Develop the multiple linear regression model that represent the dataset. Check the accuracy of
 the developed model.
-  - You need to include the complete regression analysis into your report. - Perform one-step ahead prediction and compare the performance versus the test set.
-  - Hypothesis tests analysis: F-test, t-test.
-  - AIC, BIC, RMSE, R-squared and Adjusted R-squared
-  - ACF of residuals.
-  - Q-value
-  - Variance and mean of the residuals.
-  
+  - You need to include the complete regression analysis into your report. - Perform one-step ahead prediction and compare the performance versus the test set. (done)
+  - Hypothesis tests analysis: F-test, t-test. (done)
+  - AIC, BIC, RMSE, R-squared and Adjusted R-squared (done)
+  - ACF of residuals. (done)
+  - Q-value (done)
+  - Variance and mean of the residuals. (done)
+
 - ARMA and ARIMA and SARIMA model order determination: Develop an ARMA, ARIMA and SARIMA model that represent the dataset.
   - Preliminary model development procedures and results. (ARMA model order
 determination). Pick at least two orders using GPAC table.
