@@ -129,7 +129,7 @@ for x in range(1,301):
     output = adf_kpss_statistic(diff_combined_df[f"{x}_diff"])
     adf_list.append(output[0])
     kpss_list.append(output[1])
-diff_stats = pd.DataFrame(index=range(1,101))
+diff_stats = pd.DataFrame(index=range(1,301))
 diff_stats['ADF'] = adf_list
 diff_stats['KPSS'] = kpss_list
 diff_stats.to_csv('diff_stats.csv')
@@ -334,6 +334,12 @@ ax2.set_ylabel('Rolling Variance')
 plt.savefig(image_folder+'rolling_log_diff_300.png', dpi=1000)
 plt.show()
 #%%
+
+
+
+
+
+
 # Time Series Decomposition
 acf = sm.tsa.stattools.acf(diff_combined_df['150_diff'], nlags=lags)
 pacf = sm.tsa.stattools.pacf(diff_combined_df['150_diff'], nlags=lags)
@@ -348,7 +354,7 @@ plt.savefig(image_folder+'Decomposition-150-ACF-PACF-Original.png', dpi=1000)
 plt.show()  
 stem_acf('Appliances',acf_df(diff_combined_df['150_diff'],300),19735)
 ###################
-res = STL(df.Appliances).fit()
+res = STL(df.Appliances,period=10).fit()
 fig = res.plot()
 plt.title('Original')
 plt.ylabel('Residual')
@@ -357,7 +363,7 @@ plt.tight_layout()
 plt.savefig(image_folder+'Original-Decomposition.png', dpi=1000)
 plt.show()
 
-res = STL(diff_combined_df['150_diff']).fit()
+res = STL(diff_combined_df['150_diff'],period=10).fit()
 fig = res.plot()
 plt.title('150 Diff')
 plt.ylabel('Residual')
@@ -366,18 +372,18 @@ plt.tight_layout()
 plt.savefig(image_folder+'150Diff-Decomposition.png', dpi=1000)
 plt.show()
 
-origin_stl = STL(df.Appliance)
+origin_stl = STL(df.Appliances,period=10)
 res = origin_stl.fit()
-#res.plot()
+
 
 
 
 origin_SOT=strength_of_trend(res.resid,res.trend)
-origin_season = strength_of_seasonal(res.resid,res.season)
+origin_season = strength_of_seasonal(res.resid,res.seasonal)
 
-diff_stl = STL(diff_combined_df['150_diff'])
+diff_stl = STL(diff_combined_df['150_diff'],period=10)
 res = diff_stl.fit()
-#res.plot()
+
 
 diff_SOT=strength_of_trend(res.resid,res.trend)
 diff_season = strength_of_seasonal(res.resid,res.seasonal)
@@ -385,7 +391,7 @@ diff_season = strength_of_seasonal(res.resid,res.seasonal)
 plt.figure()
 plt.plot(df.index,res.trend, label= 'Trend')
 plt.plot(df.index,res.resid, label= 'Residual')
-plt.plot(df.index,res.season, label= 'Seasonal')
+plt.plot(df.index,res.seasonal, label= 'Seasonal')
 plt.title('Trend, Residual, and Seasonal Plot')
 plt.xticks(df.index[::4500], fontsize= 10)
 plt.ylabel('Electricity (Wh)')
@@ -395,8 +401,8 @@ plt.tight_layout()
 plt.savefig(image_folder+'Cleaner-150-Decomposition.png', dpi=1000)
 plt.show()
 
-adjusted_seasonal = np.array(df.Appliance.values - res.season)
-detrended = np.array(df.Appliances - res.trend)
+adjusted_seasonal = np.subtract(np.array(df.Appliances),np.array(res.seasonal))
+detrended = np.subtract(np.array(df.Appliances),np.array(res.trend))
 residual = np.array(res.resid)
 adjust_seas = np.array(adjusted_seasonal)
 
@@ -426,16 +432,15 @@ plt.show()
 
 ####
 # ####Holt-Winters
-model = ets.ExponentialSmoothing(df['Appliances'], damped_trend= True, seasonal_periods=150, trend='add', seasonal='add').fit()
+model = ets.ExponentialSmoothing(df['Appliances'], damped_trend= True, seasonal_periods=288, trend='add', seasonal='add').fit()
 
 # prediction on train set
-hw = model.forecast(steps=len(df_train['Appliances']))
-train_hw = pd.DataFrame(hw, columns=['Appliances']).set_index(df_train.index)
-print(hw.summary())
-# prediction on test set
-hw = model.forecast(steps=len(df_test['Appliances']))
-test_hw = pd.DataFrame(hw, columns=['Appliances']).set_index(df_test.index)
-print(hw.summary())
+hw_train = model.forecast(steps=len(df_train['Appliances']))
+train_hw = pd.DataFrame(hw_train, columns=['Appliances']).set_index(df_train.index)
+
+hw_test = model.forecast(steps=len(df_test['Appliances']))
+test_hw = pd.DataFrame(hw_test, columns=['Appliances']).set_index(df_test.index)
+
 
 # model assessment
 hw_train_error = np.array(df_train['Appliances'] - train_hw['Appliances'])
@@ -456,24 +461,24 @@ print('the variance of the Holt-winter model error is', np.var(hw_test_error))
 # plot Holt-Winter model
 
 # plot of full model
+
 plt.figure()
 plt.xlabel('Time')
 plt.ylabel('Electricity (Wh)')
 plt.title('Holt-Winter Method on Data')
-plt.plot(train_hw.index,train_hw.Appliances,label= "Train Data", color = 'green')
-plt.plot(test_hw.index,test_hw.Appliances,label= "Test Data", color = 'blue')
-plt.plot(test_hw.set_index(test_hw.index), label = 'Forecasting Data', color = 'red')
+plt.plot(df_train.index,df_train['Appliances'],label= "Train Data", color = 'green')
+plt.plot(df_test.index,df_test['Appliances'],label= "Test Data", color = 'blue')
+plt.plot(test_hw.index,test_hw.Appliances, label = 'Forecasting Data', color = 'yellow')
 plt.xticks(df.index[::4500], fontsize= 10)
 plt.legend()
-plt.tight_layout()
 plt.savefig(image_folder+'HW-Train-Test-Predict.png', dpi=1000)
 plt.show()
 
 
 # plot of test data
 plt.figure()
-plt.plot(test_hw.index,test_hw.Appliances,label= "Test Data", color = 'green')
-plt.plot(test_hw.set_index(test_hw.index), label = 'Forecasting Data', color = 'blue')
+plt.plot(df_test.index,df_test.Appliances,label= "Test Data", color = 'green')
+plt.plot(test_hw.index,test_hw.Appliances, label = 'Forecasting Data', color = 'blue')
 plt.xlabel('Time')
 plt.ylabel('Electricity (Wh)')
 plt.title(f'Holt-Winter Method on Data with MSE = {mse(hw_test_error).round(4)}')
@@ -484,20 +489,19 @@ plt.savefig(image_folder+'HW-Test-Predict.png', dpi=1000)
 plt.show()
 
 # holt-winter train data
-plt.figure()
-pred_f = 1.96/np.sqrt(len(train_hw.Appliances))
-acf = sm.tsa.stattools.acf(train_hw.Appliances, nlags=lags)
-pacf = sm.tsa.stattools.pacf(train_hw.Appliances, nlags=lags)
+acf = sm.tsa.stattools.acf(hw_train, nlags=lags)
+pacf = sm.tsa.stattools.pacf(hw_train, nlags=lags)
 fig = plt.figure()
 plt.subplot(211)
 plt.title('ACF/PACF of the H-W Train data')
-plot_acf(train_hw.Appliances, ax=plt.gca(), lags=lags)
+plot_acf(hw_train, ax=plt.gca(), lags=lags)
 plt.subplot(212)
-plot_pacf(train_hw.Appliances, ax=plt.gca(), lags=lags)
+plot_pacf(hw_train, ax=plt.gca(), lags=lags)
 fig.tight_layout(pad=3)
 plt.savefig(image_folder+'HW-Train-PACF.png', dpi=1000)
 plt.show() 
 
+stem_acf('HW',acf_df(hw_train,300),19735)
 
 # holt winter test data
 acf = sm.tsa.stattools.acf(test_hw.Appliances, nlags=lags)
@@ -524,6 +528,15 @@ print(OLS_fit.summary())
 OLS_coefficients = OLS_fit.params
 initial_aic_bic_rsquared = aic_bic_rsquared_df(OLS_fit)
 
+def loop_backwards(x,y,df):
+    fit = sm.OLS(y, x).fit()
+    remove_this_feature = worst_feature(fit.pvalues)
+    print(remove_this_feature)
+    features.append(remove_this_feature)
+    new_x = new_x_train(remove_this_feature,x)
+    new_x_df = aic_bic_rsquared_df(sm.OLS(y_train, new_x).fit())
+    new_df = pd.concat([df, new_x_df])
+    return new_df,new_x
 
 newer_df, newer_x = loop_backwards(x_train,y_train,initial_aic_bic_rsquared)
 newer_df, newer_x = loop_backwards(newer_x,y_train,newer_df)
@@ -549,6 +562,7 @@ s,d,v = np.linalg.svd(H)
 print('SingularValues = ', d)
 #Condition number
 print(" the condition number for X is = ", LA.cond(x_trainer))
+print(features)
 
 
 

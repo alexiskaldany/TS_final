@@ -352,15 +352,7 @@ def new_x_train(worst_feature,old_x_train):
 def aic_bic_rsquared_df(fitted_model):
     return pd.DataFrame.from_dict({'index':[0],'aic':fitted_model.aic,'bic':fitted_model.bic,'adj_rsquared':fitted_model.rsquared_adj})
 
-def loop_backwards(x,y,df):
-    fit = sm.OLS(y, x).fit()
-    remove_this_feature = worst_feature(fit.pvalues)
-    print(remove_this_feature)
-    features.append(remove_this_feature)
-    new_x = new_x_train(remove_this_feature,x)
-    new_x_df = aic_bic_rsquared_df(sm.OLS(y_train, new_x).fit())
-    new_df = pd.concat([df, new_x_df])
-    return new_df,new_x
+
 
 
 def recursive_selection(x_train,y_train,df):

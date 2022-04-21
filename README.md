@@ -34,10 +34,8 @@
     1. Already found differenced/seasonal, use 150 lag
 - Holt-Winters method: Using the Holt-Winters method try to find the best fit using the train dataset and make a prediction using the test set. (done)
 
-- Feature selection: You need to have a section in your report that explains how the feature selection was performed and whether the collinearity exits not. Backward stepwise regressionalong with SVD and condition number is needed. You must explain that which feature(s) need to be eliminated and why. You are welcome to use other methods like PCA or random forest for feature elimination.
-- Base-models: average, naïve, drift, simple and exponential smoothing. You need to perform an
-h-step prediction based on the base models and compare the SARIMA model performance with
-the base model predication.
+- Feature selection: You need to have a section in your report that explains how the feature selection was performed and whether the collinearity exits not. Backward stepwise regressionalong with SVD and condition number is needed. You must explain that which feature(s) need to be eliminated and why. You are welcome to use other methods like PCA or random forest for feature elimination. (done)
+- Base-models: average, naïve, drift, simple and exponential smoothing. You need to perform an h-step prediction based on the base models and compare the SARIMA model performance with the base model predication.
 - Develop the multiple linear regression model that represent the dataset. Check the accuracy of
 the developed model.
   - You need to include the complete regression analysis into your report. - Perform one-step ahead prediction and compare the performance versus the test set.
@@ -46,6 +44,7 @@ the developed model.
   - ACF of residuals.
   - Q-value
   - Variance and mean of the residuals.
+  
 - ARMA and ARIMA and SARIMA model order determination: Develop an ARMA, ARIMA and SARIMA model that represent the dataset.
   - Preliminary model development procedures and results. (ARMA model order
 determination). Pick at least two orders using GPAC table.
