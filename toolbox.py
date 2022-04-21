@@ -722,3 +722,5 @@ def h_step_drift_method(train,test):
         forecast.append(train[-1]+ i*prediction)
     return forecast
 
+
+

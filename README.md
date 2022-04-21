@@ -50,7 +50,7 @@ the developed model.
 determination). Pick at least two orders using GPAC table. (Done)
   - Should include discussion of the autocorrelation function and the GPAC. Include a plot of the autocorrelation function and the GPAC table within this section. (done)
   - Include the GPAC table in your report and highlight the estimated order.
-- Estimate ARMA model parameters using the Levenberg Marquardt algorithm. Display the parameter estimates, the standard deviation of the parameter estimates and confidence intervals.
+- Estimate ARMA model parameters using the Levenberg Marquardt algorithm. Display the parameter estimates, the standard deviation of the parameter estimates and confidence intervals. 
 - Diagnostic Analysis: Make sure to include the followings:
   - Diagnostic tests (confidence intervals, zero/pole cancellation, chi-square test).
   - Display the estimated variance of the error and the estimated covariance of the estimated parameters.

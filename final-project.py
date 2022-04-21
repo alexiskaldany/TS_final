@@ -23,9 +23,23 @@ from sklearn.metrics import mean_squared_error
 from numpy import linalg as LA
 warnings.filterwarnings('ignore')
 image_folder = 'final-images/'
-
+#%%
+def visualize_loss(history, title,epochs):
+    loss = history.history["loss"]
+    val_loss = history.history["val_loss"]
+    epochs = range(len(loss))
+    plt.figure()
+    plt.plot(epochs, loss, "b", label="Training loss")
+    plt.plot(epochs, val_loss, "r", label="Validation loss")
+    plt.title(title)
+    plt.xlabel("Epochs")
+    plt.ylabel("Loss")
+    plt.legend()
+    plt.savefig(image_folder+'LSTM-Training-Val-Loss-{epochs}.png', dpi=1000)
+    plt.show()
 # %%
 # Reading csv
+df_predictions = pd.DataFrame()
 df_raw = pd.read_csv('final-data.csv', parse_dates=["date"])
 df = df_raw.copy()
 df['Date'] = pd.to_datetime(df_raw['date'])
@@ -1163,42 +1177,43 @@ test_y = np.array(df_test[['Appliances']]).reshape(df_test.shape[0], 1, 1)
 
 
 # model.fit(train_loaded,validation_data=val_loaded, epochs=1000)
-
+#%%
 inputs = timeseries_dataset_from_array(
-    data=tr_x, targets=None, sequence_length=50)
+    data=tr_x, targets=None, sequence_length=2)
 targets = timeseries_dataset_from_array(
-    data=tr_y, targets=None, sequence_length=50)
+    data=tr_y, targets=None, sequence_length=2)
 
 dataset = tf.data.Dataset.zip((inputs, targets))
 
+inputs_val = timeseries_dataset_from_array(
+    data=val_x, targets=None, sequence_length=2)
+targets_val = timeseries_dataset_from_array(
+    data=val_y, targets=None, sequence_length=2)
 
-def visualize_loss(history, title):
-    loss = history.history["loss"]
-    val_loss = history.history["val_loss"]
-    epochs = range(len(loss))
-    plt.figure()
-    plt.plot(epochs, loss, "b", label="Training loss")
-    plt.plot(epochs, val_loss, "r", label="Validation loss")
-    plt.title(title)
-    plt.xlabel("Epochs")
-    plt.ylabel("Loss")
-    plt.legend()
-    plt.show()
+inputs_test = timeseries_dataset_from_array(
+    data=test_x, targets=None, sequence_length=2)
+targets_test = timeseries_dataset_from_array(
+    data=test_y, targets=None, sequence_length=2)
 
+
+dataset = tf.data.Dataset.zip((inputs, targets))
+dataset_val = tf.data.Dataset.zip((inputs_val, targets_val))
 
 # %%
-x = np.reshape(tr_x, (df_train.drop(columns=['Appliances']).shape[0], df_train.drop(
-    columns=['Appliances']).shape[1], 1))
-print(x.shape)
-y = np.reshape(tr_y, (df_train.shape[0], 1, 1))
-print(y.shape)
-# %%
+epochs=1000
 model = Sequential()
-model.add(LSTM(50, activation='relu',
+model.add(LSTM(25, activation='relu',
+          return_sequences=True, input_shape=(None, 25)))
+model.add(LSTM(25, activation='relu',
           return_sequences=True, input_shape=(None, 25)))
 model.add(Dense(1))
-model.compile(loss='mean_squared_error', optimizer="adam",
-              metrics=['mean_squared_error'])
-history = model.fit(dataset)
+model.compile(loss='mean_squared_error',optimizer=tf.keras.optimizers.Adam(learning_rate=10 ** -5),
+              metrics=[tf.keras.metrics.RootMeanSquaredError()])
+history = model.fit(dataset,validation_data=dataset_val,epochs=epochs,verbose = 2)
+visualize_loss(model.history, "Training and Validation Loss",epochs)
+
+
 # %%
-visualize_loss(model.history, "Training and Validation Loss")
+df_predictions['LSTM'] = model.predict(inputs_test)
+
+# %%
