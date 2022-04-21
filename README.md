@@ -12,7 +12,7 @@
 
 2. Write markdown file instead of word, convert to pdf at end
 
-- To link to images: use https://raw.githubusercontent.com/alexiskaldany/TS_final/main/final-images/(name of file)
+- To link to images: use <https://raw.githubusercontent.com/alexiskaldany/TS_final/main/final-images/(name> of file)
 
 ## Requirements
 
@@ -20,19 +20,21 @@
   - Pre-processing dataset: Dataset cleaning for missing observation. You must follow the data cleaning techniques for time series dataset. (done)
   - Plot of the dependent variable versus time. (done)
   - ACF/PACF of the dependent variable. (done)
-  - Correlation Matrix with seaborn heatmap with the Pearson’s correlation coefficient.
-  - Split the dataset into train set (80%) and test set (20%).
+  - Correlation Matrix with seaborn heatmap with the Pearson’s correlation coefficient. (done)
+  - Split the dataset into train set (80%) and test set (20%). (done)
 
-- Stationarity: Check for a need to make the dependent variable stationary. If the dependent
-variable is not stationary, you need to use the techniques discussed in class to make it stationary.
-- Perform ACF/PACF analysis for stationarity. You need to perform ADF-test & kpss-test and plot the rolling mean and variance for the raw data and the transformed data.
-- Time series Decomposition: Approximate the trend and the seasonality and plot the detrended and the seasonally adjusted data set. Find the out the strength of the trend and seasonality. Refer to the lecture notes for different type of time series decomposition techniques.
-- Holt-Winters method: Using the Holt-Winters method try to find the best fit using the train
-dataset and make a prediction using the test set.
-- Feature selection: You need to have a section in your report that explains how the feature selection was performed and whether the collinearity exits not. Backward stepwise regression
- along with SVD and condition number is needed. You must explain that which feature(s) need to
-be eliminated and why. You are welcome to use other methods like PCA or random forest for
-feature elimination.
+- Stationarity: Check for a need to make the dependent variable stationary. If the dependent variable is not stationary, you need to use the techniques discussed in class to make it stationary.
+
+    1. It appears the original data has the only rolling mean and rolling variance which is stationary after observing many combinations of differencing and log-differencing
+    2. ADF/KPSS confirmed
+
+- Perform ACF/PACF analysis for stationarity. You need to perform ADF-test & kpss-test and plot the rolling mean and variance for the raw data and the transformed data. (done)
+
+- Time series Decomposition: Approximate the trend and the seasonality and plot the detrended and the seasonally adjusted data set. Find the out the strength of the trend and seasonality. Refer to the lecture notes for different type of time series decomposition techniques. (done)
+    1. Already found differenced/seasonal, use 150 lag
+- Holt-Winters method: Using the Holt-Winters method try to find the best fit using the train dataset and make a prediction using the test set. (done)
+
+- Feature selection: You need to have a section in your report that explains how the feature selection was performed and whether the collinearity exits not. Backward stepwise regressionalong with SVD and condition number is needed. You must explain that which feature(s) need to be eliminated and why. You are welcome to use other methods like PCA or random forest for feature elimination.
 - Base-models: average, naïve, drift, simple and exponential smoothing. You need to perform an
 h-step prediction based on the base models and compare the SARIMA model performance with
 the base model predication.

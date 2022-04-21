@@ -134,9 +134,9 @@ def adf_cal(x, df):
     return df
 
 def adf_kpss_statistic(timeseries):
-    adf_statistic = adfuller(timeseries)[0]
-    kpss_statistic = kpss(timeseries, regression='c', nlags="auto")[0]
-    stats = [adf_statistic,kpss_statistic]
+    adf = adfuller(timeseries)[0]
+    kpss_ = kpss(timeseries, regression='c', nlags="auto")[0]
+    stats = [adf,kpss_]
     return stats
 
 def acfunc(series, lag):
@@ -352,6 +352,17 @@ def new_x_train(worst_feature,old_x_train):
 def aic_bic_rsquared_df(fitted_model):
     return pd.DataFrame.from_dict({'index':[0],'aic':fitted_model.aic,'bic':fitted_model.bic,'adj_rsquared':fitted_model.rsquared_adj})
 
+def loop_backwards(x,y,df):
+    fit = sm.OLS(y, x).fit()
+    remove_this_feature = worst_feature(fit.pvalues)
+    print(remove_this_feature)
+    features.append(remove_this_feature)
+    new_x = new_x_train(remove_this_feature,x)
+    new_x_df = aic_bic_rsquared_df(sm.OLS(y_train, new_x).fit())
+    new_df = pd.concat([df, new_x_df])
+    return new_df,new_x
+
+
 def recursive_selection(x_train,y_train,df):
     fit = sm.OLS(y_train, x_train).fit()
     remove_this_feature = worst_feature(fit.pvalues)
@@ -448,6 +459,9 @@ def odd_or_even_rolling_average(array):
     elif order_1%2 ==1:
         return odd_rolling_average(array,order_1)
             
+def mse(errors):
+       return  np.sum(np.power(errors,2))/len(errors)
+        
         
 def strength_of_trend(residual,trend):
     var_resid = np.nanvar(residual)
