@@ -10,6 +10,7 @@ from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 import warnings
 import seaborn as sns
 import tensorflow as tf
+from tensorflow import keras
 from statsmodels.tsa.api import SARIMAX, AutoReg
 from keras.layers import Dense
 from keras.layers import LSTM
@@ -23,8 +24,10 @@ from sklearn.metrics import mean_squared_error
 from numpy import linalg as LA
 warnings.filterwarnings('ignore')
 image_folder = 'final-images/'
-#%%
-def visualize_loss(history, title,epochs):
+# %%
+
+
+def visualize_loss(history, title, epochs):
     loss = history.history["loss"]
     val_loss = history.history["val_loss"]
     epochs = range(len(loss))
@@ -37,10 +40,17 @@ def visualize_loss(history, title,epochs):
     plt.legend()
     plt.savefig(image_folder+'LSTM-Training-Val-Loss-{epochs}.png', dpi=1000)
     plt.show()
+
+# Lists
+models = []
+model_mse = []
+model_ljb = []
+model_error_var = []
+model_notes = []
 # %%
 # Reading csv
-df_predictions = pd.DataFrame()
-df_mse = pd.DataFrame(columns=['Model','MSE'])
+
+df_models = pd.DataFrame(columns=['Model', 'MSE','Ljung-Box','Error-Var','Notes'])
 df_raw = pd.read_csv('final-data.csv', parse_dates=["date"])
 df = df_raw.copy()
 df['Date'] = pd.to_datetime(df_raw['date'])
@@ -72,7 +82,7 @@ plt.savefig(image_folder+'1a-dependent.png', dpi=1000)
 plt.show()
 
 # 1c. ACF/PACF of the dependent variable
-lags = 300
+lags = 90
 acf = sm.tsa.stattools.acf(df.Appliances, nlags=lags)
 pacf = sm.tsa.stattools.pacf(df.Appliances, nlags=lags)
 fig = plt.figure()
@@ -85,7 +95,7 @@ fig.tight_layout(pad=3)
 plt.savefig(image_folder+'1c-ACF-PACF-Original.png', dpi=1000)
 plt.show()
 # Stem plot TODO :make symmetric
-stem_acf('Original-Appliances', acf_df(df.Appliances, 300), 19735)
+stem_acf('Original-Appliances', acf_df(df.Appliances, 90), 19735)
 ###################
 # 1d. Correlation Matrix + Heatmap
 corr = df.corr()
@@ -353,8 +363,8 @@ plt.show()
 # %%
 ##############################
 # Using differenced data in y from now on
-diff_df = diff(df.Appliances, 144, df.index).copy()
-df['Appliances'] = diff_df['144_diff'].copy()
+#diff_df = diff(df.Appliances, 144, df.index).copy()
+#df['Appliances'] = diff_df['144_diff'].copy()
 
 # Using differenced data exclusively now
 index_80 = int(len(df)*0.8)
@@ -366,19 +376,19 @@ diff_combined_df = pd.read_csv('diff_combined_df.csv')
 
 
 # Time Series Decomposition
-acf = sm.tsa.stattools.acf(diff_combined_df['150_diff'], nlags=lags)
-pacf = sm.tsa.stattools.pacf(diff_combined_df['150_diff'], nlags=lags)
+acf = sm.tsa.stattools.acf(diff_combined_df['144_diff'], nlags=lags)
+pacf = sm.tsa.stattools.pacf(diff_combined_df['144_diff'], nlags=lags)
 fig = plt.figure()
 plt.subplot(211)
 plt.title('ACF/PACF of the raw data')
-plot_acf(diff_combined_df['150_diff'], ax=plt.gca(), lags=lags)
+plot_acf(diff_combined_df['144_diff'], ax=plt.gca(), lags=lags)
 plt.subplot(212)
-plot_pacf(diff_combined_df['150_diff'], ax=plt.gca(), lags=lags)
+plot_pacf(diff_combined_df['144_diff'], ax=plt.gca(), lags=lags)
 fig.tight_layout(pad=3)
-plt.savefig(image_folder+'Decomposition-150-ACF-PACF-Original.png', dpi=1000)
+plt.savefig(image_folder+'Decomposition-144-ACF-PACF-Original.png', dpi=1000)
 plt.show()
 stem_acf('Appliances-150-diff-ACF',
-         acf_df(diff_combined_df['150_diff'], 300), 19735)
+         acf_df(diff_combined_df['144_diff'], 90), 19735)
 ###################
 res = STL(df.Appliances, period=10).fit()
 fig = res.plot()
@@ -389,13 +399,13 @@ plt.tight_layout()
 plt.savefig(image_folder+'Original-Decomposition.png', dpi=1000)
 plt.show()
 
-res = STL(diff_combined_df['150_diff'], period=10).fit()
+res = STL(diff_combined_df['144_diff'], period=10).fit()
 fig = res.plot()
 plt.title('150 Diff')
 plt.ylabel('Residual')
 plt.xlabel('Iterations')
 plt.tight_layout()
-plt.savefig(image_folder+'150Diff-Decomposition.png', dpi=1000)
+plt.savefig(image_folder+'144-Diff-Decomposition.png', dpi=1000)
 plt.show()
 
 origin_stl = STL(df.Appliances, period=10)
@@ -405,7 +415,7 @@ res = origin_stl.fit()
 origin_SOT = strength_of_trend(res.resid, res.trend)
 origin_season = strength_of_seasonal(res.resid, res.seasonal)
 
-diff_stl = STL(diff_combined_df['150_diff'], period=10)
+diff_stl = STL(diff_combined_df['144_diff'], period=10)
 res = diff_stl.fit()
 
 
@@ -422,7 +432,7 @@ plt.ylabel('Electricity (Wh)')
 plt.xlabel('Time')
 plt.legend()
 plt.tight_layout()
-plt.savefig(image_folder+'Cleaner-150-Decomposition.png', dpi=1000)
+plt.savefig(image_folder+'Cleaner-144-Decomposition.png', dpi=1000)
 plt.show()
 #
 adjusted_seasonal = np.subtract(
@@ -458,11 +468,11 @@ plt.show()
 #
 
 # ####Holt-Winters
-model = ets.ExponentialSmoothing(
+model_hw = ets.ExponentialSmoothing(
     df_undiff.Appliances, seasonal_periods=144, trend=None, seasonal='add').fit()
 
 # prediction on train set
-hw_train = model.forecast(steps=df_train.shape[0])
+hw_train = model_hw.forecast(steps=df_train.shape[0])
 hw_train_mean_var = cal_rolling_mean_var(hw_train)
 fig, (ax1, ax2) = plt.subplots(2, 1)
 fig.suptitle('Rolling mean/var of H-W prediction Data')
@@ -477,28 +487,33 @@ plt.show()
 train_hw = pd.DataFrame(
     hw_train, columns=['Appliances']).set_index(df_train.index)
 
-hw_test = model.forecast(steps=df_test.shape[0])
+hw_test = model_hw.forecast(steps=df_test.shape[0])
 test_hw = pd.DataFrame(
     hw_test, columns=['Appliances']).set_index(df_test.index)
 
 
 # model assessment
 hw_train_error = np.array(df_train['Appliances'] - train_hw['Appliances'])
-print(f"Train MSE: {mse(hw_train_error).round(4)}")
-print(sm.stats.acorr_ljungbox(hw_train_error,
-      lags=[5], boxpierce=True, return_df=True))
+models.append('Holt-Winters')
+model_mse.append(mse(hw_train_error).round(4))
+model_ljb.append(sm.stats.acorr_ljungbox(hw_train_error,
+      lags=[5], boxpierce=True).iat[0,0])
+model_error_var.append(np.var(hw_train_error))
+model_notes.append('Flat prediction')
+# print(sm.stats.acorr_ljungbox(hw_train_error,
+#       lags=[5], boxpierce=True, return_df=True))
 
-print('HW train error mean is', np.mean(hw_train_error))
-print('the variance of the Holt-winter model prediction error is',
-      np.var(hw_train_error))
+# print('HW train error mean is', np.mean(hw_train_error))
+# print('the variance of the Holt-winter model prediction error is',
+#       np.var(hw_train_error))
 
-# test data
+# # test data
 hw_test_error = np.array(df_test['Appliances'] - test_hw['Appliances'])
-print(f"Test MSE is: {mse(hw_test_error)}")
-print(sm.stats.acorr_ljungbox(hw_test_error,
-      lags=[5], boxpierce=True, return_df=True))
-print('HW test error mean is', np.mean(hw_test_error))
-print('the variance of the Holt-winter model error is', np.var(hw_test_error))
+# print(f"Test MSE is: {mse(hw_test_error)}")
+# print(sm.stats.acorr_ljungbox(hw_test_error,
+#       lags=[5], boxpierce=True, return_df=True))
+# print('HW test error mean is', np.mean(hw_test_error))
+# print('the variance of the Holt-winter model error is', np.var(hw_test_error))
 
 
 # plot Holt-Winter model
@@ -619,7 +634,12 @@ print(sm.stats.acorr_ljungbox(avg_yf_error,
 
 stem_acf('Average-Error-ACF', acf_df(avg_yf_error, 90), len(df_train))
 
-
+models.append('Average-Method')
+model_mse.append(mse(avg_yt_error).round(4))
+model_ljb.append(sm.stats.acorr_ljungbox(avg_yt_error,
+      lags=[5], boxpierce=True).iat[0,0])
+model_error_var.append(np.var(avg_yt_error))
+model_notes.append('Slightly better')
 # naive method
 naive_predict = h_step_naive_method(df_train.Appliances, df_test.Appliances)
 
@@ -674,7 +694,12 @@ print('the variance for the prediction error appeared less than the variance of 
 
 stem_acf('Stem-ACF-Naive-Err', acf_df(naive_error, 90), len(df_train))
 
-
+models.append('Naive-Method')
+model_mse.append(mse(naive_error).round(4))
+model_ljb.append(sm.stats.acorr_ljungbox(naive_error,
+      lags=[5], boxpierce=True).iat[0,0])
+model_error_var.append(np.var(naive_error))
+model_notes.append('Slightly better')
 # drift method
 one_step_predict = one_step_drift_method(df_train.Appliances)
 h_step_predict = h_step_drift_method(df_train.Appliances, df_test.Appliances)
@@ -730,7 +755,12 @@ print('the variance for the prediction error appeared less than the variance of 
 
 
 stem_acf('drift-Stem-ACF-Drift-Err', acf_df(drift_yf_error, 90), len(df_train))
-
+models.append('Drift-Method')
+model_mse.append(mse(drift_yt_error).round(4))
+model_ljb.append(sm.stats.acorr_ljungbox(drift_yt_error,
+      lags=[5], boxpierce=True).iat[0,0])
+model_error_var.append(np.var(drift_yt_error))
+model_notes.append('Slightly better')
 # Seasonal exponential smoothing
 
 
@@ -792,7 +822,12 @@ print('The variance of the prediction error appeared less than the variance of t
 
 
 stem_acf('Stem-ACF-SES-Err', acf_df(SES_yf_error, 90), len(df_train))
-
+models.append('SES-Method')
+model_mse.append(mse(SES_yt_error).round(4))
+model_ljb.append(sm.stats.acorr_ljungbox(SES_yt_error,
+      lags=[5], boxpierce=True).iat[0,0])
+model_error_var.append(np.var(SES_yt_error))
+model_notes.append('Slightly better')
 ###############
 # Doing Backwards regression and multiple linear regression together
 # - Develop the multiple linear regression model that represent the dataset. Check the accuracy of
@@ -827,12 +862,6 @@ def loop_backwards(x, y, df):
 
 
 newer_df, newer_x = loop_backwards(x_train, y_train, initial_aic_bic_rsquared)
-newer_df, newer_x = loop_backwards(newer_x, y_train, newer_df)
-newer_df, newer_x = loop_backwards(newer_x, y_train, newer_df)
-newer_df, newer_x = loop_backwards(newer_x, y_train, newer_df)
-newer_df, newer_x = loop_backwards(newer_x, y_train, newer_df)
-newer_df, newer_x = loop_backwards(newer_x, y_train, newer_df)
-newer_df, newer_x = loop_backwards(newer_x, y_train, newer_df)
 newer_df, newer_x = loop_backwards(newer_x, y_train, newer_df)
 newer_df, newer_x = loop_backwards(newer_x, y_train, newer_df)
 newer_df, newer_x = loop_backwards(newer_x, y_train, newer_df)
@@ -937,7 +966,13 @@ print('the variance of the regression model forecasting error is', np.var(y_fore
 print('the RMSE of the regression model forecasting error is, ', mean_squared_error(
     df_after_selection_test['Appliances'], y_forecast.values, squared=False))
 print('the variance of the prediction error appeared larger than the variance of the testing error')
-
+linear_regression_error = np.subtract(np.array(df_train.Appliances), np.array(y_pred))
+models.append('Linear-Regression')
+model_mse.append(mse(linear_regression_error).round(4))
+model_ljb.append(sm.stats.acorr_ljungbox(linear_regression_error,
+      lags=[5], boxpierce=True).iat[0,0])
+model_error_var.append(np.var(linear_regression_error))
+model_notes.append('Likely best')
 # %%
 # ARIMA Modeling
 lags = 20
@@ -952,6 +987,7 @@ sns.heatmap(da_pac,  annot=True)
 plt.title('GPAC Table')
 plt.xlabel('k values')
 plt.ylabel('j values')
+plt.savefig(image_folder+'GPAC-Plot.png', dpi=1000)
 plt.show()
 
 
@@ -959,9 +995,9 @@ plt.show()
 na = 3
 nb = 0
 
-model_3_0 = sm.tsa.ARIMA(endog=df_train['Appliances'],order=(na,0,nb)).fit()
+model_3_0 = sm.tsa.ARIMA(endog=df_train['Appliances'], order=(na, 0, nb)).fit()
 print(model_3_0.summary())
-#MSE calculation
+# MSE calculation
 # train data
 arma_3_0_pred = model_3_0.predict(start=0, end=15787)
 arma_3_0_error = df_train.Appliances - arma_3_0_pred.values
@@ -972,36 +1008,46 @@ arma_3_0_residuals = df_test.Appliances - arma_3_0_forecast.values
 
 stem_acf('Stem-ACF-3-0-Errors', acf_df(arma_3_0_error, 90), len(df_train))
 
-stem_acf('Stem-ACF-3-0-Residuals', acf_df(arma_3_0_residuals, 90), len(df_train))
+stem_acf('Stem-ACF-3-0-Residuals',
+         acf_df(arma_3_0_residuals, 90), len(df_train))
 
 # train data
-print("Mean square error for the ARMA(3,0) method forecasting on Electricity (Wh) is\n ", mse(arma_3_0_error).round(4))
-print(sm.stats.acorr_ljungbox(arma_3_0_error, lags=[5], boxpierce=True, return_df=True))
+print("Mean square error for the ARMA(3,0) method forecasting on Electricity (Wh) is\n ",
+      mse(arma_3_0_error).round(4))
+print(sm.stats.acorr_ljungbox(arma_3_0_error,
+      lags=[5], boxpierce=True, return_df=True))
 print(' Q value :')
 print(' mean for the ARMA(3,0) model error is\n', np.mean(arma_3_0_error))
 print(' variance for the ARMA(3,0) model error is\n', np.var(arma_3_0_error))
 print("covariance Matrix is\n", model_3_0.cov_params())
 print("standard error coefficients are \n", model_3_0.bse)
 print(' confidence intervals are\n', model_3_0.conf_int())
-print(' RMSE for the ARMA(3,0) model error is\n ', mean_squared_error(df_train['Appliances'], arma_3_0_pred.values, squared=False))
+print(' RMSE for the ARMA(3,0) model error is\n ', mean_squared_error(
+    df_train['Appliances'], arma_3_0_pred.values, squared=False))
 
 
 # forecasting data
-print('The MSE for the forecasting data was found to be',mse(arma_3_0_residuals))
-print(sm.stats.acorr_ljungbox(arma_3_0_residuals, lags=[5], boxpierce=True, return_df=True))
+print('The MSE for the forecasting data was found to be', mse(arma_3_0_residuals))
+print(sm.stats.acorr_ljungbox(arma_3_0_residuals,
+      lags=[5], boxpierce=True, return_df=True))
 print('The Q value was found to be 4824.96647  with a p-value of 0.0 ')
-print('the mean for the ARMA(3,0) model forecasting error is\n', np.mean(arma_3_0_residuals))
-print('the variance for the ARMA(3,0) model forecasting error is\n', np.var(arma_3_0_residuals))
-print('the RMSE for the ARMA(3,0) model error is\n ', mean_squared_error(df_test['Appliances'], arma_3_0_forecast.values, squared=False))
+print('the mean for the ARMA(3,0) model forecasting error is\n',
+      np.mean(arma_3_0_residuals))
+print('the variance for the ARMA(3,0) model forecasting error is\n',
+      np.var(arma_3_0_residuals))
+print('the RMSE for the ARMA(3,0) model error is\n ', mean_squared_error(
+    df_test['Appliances'], arma_3_0_forecast.values, squared=False))
 print('The variance of the prediction error was less than the variance of the forecasting error')
 
 plt.figure()
 plt.title('ARMA(3,0) ')
-plt.plot(df_train.index, df_train.Appliances, color= 'red', label='Train Data')
-plt.plot(df_test.index, df_test.Appliances, color= 'green', label='Test Data')
-plt.plot(df_train.index, arma_3_0_pred.values, color= 'yellow', label='Prediction Data')
-plt.plot(df_test.index, arma_3_0_forecast.values, color= 'blue', label='Forecasting Data')
-plt.xticks(df.index[::4500], fontsize= 10)
+plt.plot(df_train.index, df_train.Appliances, color='red', label='Train Data')
+plt.plot(df_test.index, df_test.Appliances, color='green', label='Test Data')
+plt.plot(df_train.index, arma_3_0_pred.values,
+         color='yellow', label='Prediction Data')
+plt.plot(df_test.index, arma_3_0_forecast.values,
+         color='blue', label='Forecasting Data')
+plt.xticks(df.index[::4500], fontsize=10)
 plt.ylabel('Electricity (Wh)')
 plt.xlabel('Time')
 plt.legend()
@@ -1012,9 +1058,10 @@ plt.show()
 
 plt.figure()
 plt.title('Forecasting on ARMA(3,0) for Electricity (Wh)')
-plt.plot(df_test.index, df_test.Appliances, color= 'red', label='Test Data')
-plt.plot(df_test.index, arma_3_0_forecast.values, color= 'yellow', label='Forecasting Data')
-plt.xticks(df_test.index[::750], fontsize= 10)
+plt.plot(df_test.index, df_test.Appliances, color='red', label='Test Data')
+plt.plot(df_test.index, arma_3_0_forecast.values,
+         color='yellow', label='Forecasting Data')
+plt.xticks(df_test.index[::750], fontsize=10)
 plt.ylabel('Electricity (Wh)')
 plt.xlabel('Time')
 plt.legend()
@@ -1022,16 +1069,20 @@ plt.tight_layout()
 plt.savefig(image_folder+'ARMA-3-0-Test-Predict.png', dpi=1000)
 plt.show()
 
+models.append('ARMA-3-0')
+model_mse.append(mse(arma_3_0_error).round(4))
+model_ljb.append(sm.stats.acorr_ljungbox(arma_3_0_error,
+      lags=[5], boxpierce=True).iat[0,0])
+model_error_var.append(np.var(arma_3_0_error))
+model_notes.append('slightly worse')
 ###########
 # ARMA (3,3)
-
-#### ARMA (3,0)
 na = 3
 nb = 3
 
-model_3_3 = sm.tsa.ARIMA(endog=df_train['Appliances'],order=(na,0,nb)).fit()
+model_3_3 = sm.tsa.ARIMA(endog=df_train['Appliances'], order=(na, 0, nb)).fit()
 print(model_3_3.summary())
-#MSE calculation
+# MSE calculation
 # train data
 arma_3_3_pred = model_3_3.predict(start=0, end=15787)
 arma_3_3_error = df_train.Appliances - arma_3_3_pred.values
@@ -1042,36 +1093,46 @@ arma_3_3_residuals = df_test.Appliances - arma_3_3_forecast.values
 
 stem_acf('Stem-ACF-3-3-Errors', acf_df(arma_3_3_error, 90), len(df_train))
 
-stem_acf('Stem-ACF-3-3-Residuals', acf_df(arma_3_3_residuals, 90), len(df_train))
+stem_acf('Stem-ACF-3-3-Residuals',
+         acf_df(arma_3_3_residuals, 90), len(df_train))
 
 # train data
-print("Mean square error for the ARMA(3,3) method forecasting on Electricity (Wh) is\n ", mse(arma_3_3_error).round(4))
-print(sm.stats.acorr_ljungbox(arma_3_3_error, lags=[5], boxpierce=True, return_df=True))
+print("Mean square error for the ARMA(3,3) method forecasting on Electricity (Wh) is\n ",
+      mse(arma_3_3_error).round(4))
+print(sm.stats.acorr_ljungbox(arma_3_3_error,
+      lags=[5], boxpierce=True, return_df=True))
 print(' Q value :')
 print(' mean for the ARMA(3,3) model error is\n', np.mean(arma_3_3_error))
 print(' variance for the ARMA(3,3) model error is\n', np.var(arma_3_3_error))
 print("covariance Matrix is\n", model_3_0.cov_params())
 print("standard error coefficients are \n", model_3_0.bse)
 print(' confidence intervals are\n', model_3_0.conf_int())
-print(' RMSE for the ARMA(3,3) model error is\n ', mean_squared_error(df_train['Appliances'], arma_3_3_pred.values, squared=False))
+print(' RMSE for the ARMA(3,3) model error is\n ', mean_squared_error(
+    df_train['Appliances'], arma_3_3_pred.values, squared=False))
 
 
 # forecasting data
-print('The MSE for the forecasting data was found to be',mse(arma_3_3_residuals))
-print(sm.stats.acorr_ljungbox(arma_3_0_residuals, lags=[5], boxpierce=True, return_df=True))
+print('The MSE for the forecasting data was found to be', mse(arma_3_3_residuals))
+print(sm.stats.acorr_ljungbox(arma_3_0_residuals,
+      lags=[5], boxpierce=True, return_df=True))
 print('The Q value was found to be 4824.96647  with a p-value of 0.0 ')
-print('the mean for the ARMA(3,0) model forecasting error is\n', np.mean(arma_3_3_residuals))
-print('the variance for the ARMA(3,3) model forecasting error is\n', np.var(arma_3_3_residuals))
-print('the RMSE for the ARMA(3,3) model error is\n ', mean_squared_error(df_test['Appliances'], arma_3_3_forecast.values, squared=False))
+print('the mean for the ARMA(3,0) model forecasting error is\n',
+      np.mean(arma_3_3_residuals))
+print('the variance for the ARMA(3,3) model forecasting error is\n',
+      np.var(arma_3_3_residuals))
+print('the RMSE for the ARMA(3,3) model error is\n ', mean_squared_error(
+    df_test['Appliances'], arma_3_3_forecast.values, squared=False))
 print('The variance of the prediction error was less than the variance of the forecasting error')
 
 plt.figure()
 plt.title('ARMA(3,3) ')
-plt.plot(df_train.index, df_train.Appliances, color= 'red', label='Train Data')
-plt.plot(df_test.index, df_test.Appliances, color= 'green', label='Test Data')
-plt.plot(df_train.index, arma_3_3_pred.values, color= 'yellow', label='Prediction Data')
-plt.plot(df_test.index, arma_3_3_forecast.values, color= 'blue', label='Forecasting Data')
-plt.xticks(df.index[::4500], fontsize= 10)
+plt.plot(df_train.index, df_train.Appliances, color='red', label='Train Data')
+plt.plot(df_test.index, df_test.Appliances, color='green', label='Test Data')
+plt.plot(df_train.index, arma_3_3_pred.values,
+         color='yellow', label='Prediction Data')
+plt.plot(df_test.index, arma_3_3_forecast.values,
+         color='blue', label='Forecasting Data')
+plt.xticks(df.index[::4500], fontsize=10)
 plt.ylabel('Electricity (Wh)')
 plt.xlabel('Time')
 plt.legend()
@@ -1082,9 +1143,10 @@ plt.show()
 
 plt.figure()
 plt.title('Forecasting on ARMA(3,3) for Electricity (Wh)')
-plt.plot(df_test.index, df_test.Appliances, color= 'red', label='Test Data')
-plt.plot(df_test.index, arma_3_3_forecast.values, color= 'yellow', label='Forecasting Data')
-plt.xticks(df_test.index[::750], fontsize= 10)
+plt.plot(df_test.index, df_test.Appliances, color='red', label='Test Data')
+plt.plot(df_test.index, arma_3_3_forecast.values,
+         color='yellow', label='Forecasting Data')
+plt.xticks(df_test.index[::750], fontsize=10)
 plt.ylabel('Electricity (Wh)')
 plt.xlabel('Time')
 plt.legend()
@@ -1092,22 +1154,123 @@ plt.tight_layout()
 plt.savefig(image_folder+'ARMA-3-3-Test-Predict.png', dpi=1000)
 plt.show()
 
+models.append('ARMA-3-3')
+model_mse.append(mse(arma_3_3_error).round(4))
+model_ljb.append(sm.stats.acorr_ljungbox(arma_3_3_error,
+      lags=[5], boxpierce=True).iat[0,0])
+model_error_var.append(np.var(arma_3_3_error))
+model_notes.append('Likely best')
+#%%
+######
+# SARIMA
+SARIMA = sm.tsa.statespace.SARIMAX(df_train.Appliances, order=(3,0,0), seasonal_order=(0,3,0,12),
+                                    enforce_stationarity=False,
+                                    enforce_invertibility=False,)
+result = SARIMA.fit()
+print(result.summary())
+
+# Train
+sarima_prediction = result.predict(start=0, end=len(df_train), dynamic=False)
+sarima_prediction_mean = np.mean(np.array(sarima_prediction))
+sarima_errors = df_train.Appliances - sarima_prediction
+
+# test data
+
+sarima_forecast = result.predict(start=0, end=(len(df_test['Appliances'])))
+# ST_pred_f = ST_pred_f.predicted_mean
+# pred_f_plot= ST_pred_f
+sarima_residuals = df_test.Appliances - sarima_forecast.values[1:]
+
+# train
+stem_acf('Stem-ACF-SARIMA-Errors', acf_df(sarima_errors, 90), len(df_train))
+
+# test
+stem_acf('Stem-ACF-SARIMA-Residuals', acf_df(sarima_residuals, 90), len(df_train))
+
+
+
+# training statistics
+print("Mean square error for the  ARIMA(3,0,0)x(0,0,0,12) method forecasting on Electricity (Wh) is\n ", mse(sarima_errors).round(4))
+print(sm.stats.acorr_ljungbox(sarima_errors, lags=[5], boxpierce=True, return_df=True))
+print('The Q value was found to be 78.976724  with a p-value of 1.373662e-15')
+print('the mean for the  ARIMA(3,0,0)x(0,3,0,12) model error is\n', np.mean(sarima_errors))
+print('the variance for the  ARIMA(3,0,0)x(0,3,0,12) model error is\n', np.var(sarima_errors))
+print("the covariance Matrix for the data is\n", result.cov_params())
+print("the Standard Error for the coefficients are is\n", result.bse)
+print('The confidence intervals are\n', result.conf_int())
+print('the RMSE for the ARIMA(3,0,0)x(0,3,0,12) model error is\n ', mean_squared_error(df_train.Appliances, sarima_prediction.values[1:], squared=False))
+
+# testing statistics
+print('The MSE for the forecasting data was found to be',mse(sarima_residuals))
+print(sm.stats.acorr_ljungbox(sarima_residuals, lags=[5], boxpierce=True, return_df=True))
+print('The Q value was found to be 923.111417 with a p-value of 2.648581e-197')
+print('the mean for the ARIMA(3,0,0)x(0,3,0,12) model forecasting error is\n', np.mean(sarima_residuals))
+print('the variance for the ARIMA(3,0,0)x(0,3,0,12) model forecasting error is\n', np.var(sarima_residuals))
+print('the RMSE for the ARIMA(3,0,0)x(0,3,0,12) model error is\n ', mean_squared_error(df_test['Appliances'], sarima_forecast[1:].values, squared=False))
+print('the variance of the prediction error appeared less than the variance of the forecasting error')
+# without forecasting
+plt.figure() 
+plt.title('ARIMA(3,0,0)x(0,3,0,12) on Electricity (Wh)')
+plt.xlabel('Date')
+plt.ylabel('Electricity (Wh)')
+plt.plot(df_train.index, sarima_prediction[1:], color ='yellow', label='Prediction Data')
+plt.plot(df_train.index, df_train.Appliances, color='red', label='Train Data')
+plt.plot(df_test.index, df_test.Appliances, color='green', label='Test Data')
+plt.xticks(df.index[::4500], rotation= 90, fontsize= 10)
+plt.legend()
+plt.tight_layout()
+plt.savefig(image_folder+'SARIMA-No-Forecast-Test-Predict.png', dpi=1000)
+plt.show()
+
+
+# with forecasting
+plt.figure()
+plt.title('ARIMA(3,0,0)x(0,3,0,12) on Electricity (Wh)')
+plt.xlabel('Date')
+plt.ylabel('Electricity (Wh)')
+plt.plot(df_train.index, sarima_prediction[1:], color ='yellow', label='Prediction Data')
+plt.plot(df_train.index, df_train.Appliances, color='red', label='Train Data')
+plt.plot(df_test.index, df_test.Appliances, color='green', label='Test Data')
+plt.plot(df_test.index, sarima_forecast[1:], color ='blue', label='Forecasting Data')
+plt.xticks(df.index[::4500], rotation= 90, fontsize= 10)
+plt.legend()
+plt.tight_layout()
+plt.savefig(image_folder+'SARIMA-WITH-Forecast-Test-Predict.png', dpi=1000)
+plt.show()
+
+models.append('ARIMA(3,0,0)x(0,3,0,12)')
+model_mse.append(mse(sarima_errors).round(4))
+model_ljb.append(sm.stats.acorr_ljungbox(sarima_errors,
+      lags=[5], boxpierce=True).iat[0,0])
+model_error_var.append(np.var(sarima_errors))
+model_notes.append('Likely best')
 
 # %%
 # LSTM
-### Keras Notes
-### Sequence_length and "unit" must be same value
-### Any inp
-epochs=100
-sequence_length = 12
-learning_rate=10 ** -4
+# Keras Notes
+# Sequence_length has no relationship with input shape
+# n_features and unit much be the same
+# arrays from dataframes need to be reshaped to be three dimensional
+# Any inp
+# ModelCheckpoint callback
+# ReduceLROnPlateau callback
+reduce_lr_on_plateau_cb = keras.callbacks.ReduceLROnPlateau(factor=0.1,
+                                                            patience=1)
+epochs = 50
+sequence_length = 1
+learning_rate = 10 ** -4
 n_features = 25
 
-#df_lstm = pd.read_csv('final-data.csv')
-df_lstm = df.copy()
-df_lstm.set_index('date', inplace=True)
-del df_lstm['rv1']
-del df_lstm['rv2']
+df_lstm = df_undiff.copy()
+#df_lstm = df.copy()
+try:
+    df_lstm.set_index('Date', inplace=True)
+    del df_lstm['rv1']
+    del df_lstm['rv2']
+except:
+    print('whatever')
+
+
 timestep = [x for x in range(len(df_lstm))]
 index_train = int(len(df)*0.8)
 index_test = int(len(df)-index_80)
@@ -1118,9 +1281,9 @@ df_val = df_lstm.iloc[index_val:index_train, :]
 df_test = df_lstm.iloc[index_train:, :]
 
 tr_x = np.array(df_train.drop(columns=['Appliances'])).reshape(
-    len(df_train), 25)
+    len(df_train), n_features, 1)
 
-tr_y = np.array(df_train[['Appliances']]).reshape(len(df_train), 1)
+tr_y = np.array(df_train[['Appliances']]).reshape(len(df_train), 1, 1)
 
 val_x = np.array(df_val.drop(columns=['Appliances'])).reshape(
     len(df_val), n_features, 1)
@@ -1131,11 +1294,6 @@ test_x = np.array(df_test.drop(columns=['Appliances'])).reshape(
     len(df_test), n_features, 1)
 
 test_y = np.array(df_test[['Appliances']]).reshape(df_test.shape[0], 1, 1)
-
-#%%
-
-
-
 
 inputs = timeseries_dataset_from_array(
     data=tr_x, targets=None, sequence_length=sequence_length)
@@ -1158,22 +1316,54 @@ targets_test = timeseries_dataset_from_array(
 dataset = tf.data.Dataset.zip((inputs, targets))
 dataset_val = tf.data.Dataset.zip((inputs_val, targets_val))
 
-model = Sequential()
-model.add(LSTM(25, activation='relu',
+model_lstm = Sequential()
+model_lstm.add(LSTM(25, activation='relu',
           return_sequences=True, input_shape=(None, 25)))
-model.add(LSTM(25, activation='relu',
+model_lstm.add(LSTM(25, activation='relu',
           return_sequences=True, input_shape=(None, 25)))
-model.add(Dense(1))
-model.compile(loss='mean_squared_error',optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
-              metrics=[tf.keras.metrics.RootMeanSquaredError()])
-history = model.fit(dataset,validation_data=dataset_val,epochs=epochs,verbose = 1)
+model_lstm.add(Dense(1))
+model_lstm.compile(loss='mean_squared_error', optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
+              metrics=['mean_squared_error'])
 
-visualize_loss(model.history, "Training and Validation Loss",epochs)
+history = model_lstm.fit(
+    dataset, validation_data=dataset_val, epochs=epochs, verbose=1,
+    callbacks=[reduce_lr_on_plateau_cb])
 
 
-# %%
-# predictions
-lstm_pred = np.array(model.predict(inputs_test)).flatten
-df_predictions[f'lstm_{epochs}_epoch'] = lstm_pred
+visualize_loss(history, "Training and Validation Loss", epochs)
+lstm_pred = np.array(model_lstm.predict(inputs)).flatten()
+lstm_forecast = np.array(model_lstm.predict(inputs_test)).flatten()
+lstm_errors = np.subtract(np.array(df_train.Appliances),lstm_pred)
 
-# %%
+stem_acf('Stem-ACF-LSTM-Errors',
+         acf_df(lstm_errors, 90), len(df_train))
+
+plt.figure()
+plt.title('LSTM on Electricity (Wh)')
+plt.xlabel('Date')
+plt.ylabel('Electricity (Wh)')
+plt.plot(df_train.index, lstm_pred, color ='yellow', label='Prediction Data')
+plt.plot(df_train.index, df_train.Appliances, color='red', label='Train Data')
+plt.plot(df_test.index, df_test.Appliances, color='green', label='Test Data')
+plt.plot(df_test.index, lstm_forecast, color ='blue', label='Forecasting Data')
+plt.xticks(df.index[::4500], rotation= 90, fontsize= 10)
+plt.legend()
+plt.tight_layout()
+plt.savefig(image_folder+'LSTM-WITH-Forecast-Test-Predict.png', dpi=1000)
+plt.show()
+models.append('LSTM')
+model_mse.append(mse(lstm_errors).round(4))
+model_ljb.append(sm.stats.acorr_ljungbox(lstm_errors,
+      lags=[5], boxpierce=True).iat[0,0])
+model_error_var.append(np.var(lstm_errors))
+model_notes.append('150 epochs')
+
+# Creating model dataframe
+df_models = pd.DataFrame()
+df_models['models'] = models
+df_models['mse'] = model_mse
+df_models['ljb'] = model_ljb
+df_models['error_var'] = model_error_var
+df_models['notes'] = model_notes
+df_models.to_csv('models_results.csv')
+#%%

@@ -40,7 +40,7 @@
 | Variable  | Description  | Variable  | Description  |
 |--- |--- |--- |--- |
 | date | 10 minute intervals  |  Appliances | energy use of appliances  |
-| lights  | energy use of light fixtures  |  Press_mm_hg |   |
+| lights  | energy use of light fixtures  |  Press_mm_hg | Pressure  |
 | RH_1  | Humidity in kitchen  |   T1| Temp in kitchen |
 |RH_2   | Humidity in living room  | T2  | Temp in living room |
 | RH_3  | Humidity in laundry area |T3   | Temp in laundry area |

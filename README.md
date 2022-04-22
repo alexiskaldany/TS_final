@@ -37,7 +37,7 @@
 - Feature selection: You need to have a section in your report that explains how the feature selection was performed and whether the collinearity exits not. Backward stepwise regressionalong with SVD and condition number is needed. You must explain that which feature(s) need to be eliminated and why. You are welcome to use other methods like PCA or random forest for feature elimination. (done)
 - Base-models: average, naïve, drift, simple and exponential smoothing. You need to perform an h-step prediction based on the base models and compare the SARIMA model performance with the base model predication. (done)
 - Develop the multiple linear regression model that represent the dataset. Check the accuracy of
-the developed model.
+the developed model. (done)
   - You need to include the complete regression analysis into your report. - Perform one-step ahead prediction and compare the performance versus the test set. (done)
   - Hypothesis tests analysis: F-test, t-test. (done)
   - AIC, BIC, RMSE, R-squared and Adjusted R-squared (done)
@@ -50,7 +50,7 @@ the developed model.
 determination). Pick at least two orders using GPAC table. (Done)
   - Should include discussion of the autocorrelation function and the GPAC. Include a plot of the autocorrelation function and the GPAC table within this section. (done)
   - Include the GPAC table in your report and highlight the estimated order.
-- Estimate ARMA model parameters using the Levenberg Marquardt algorithm. Display the parameter estimates, the standard deviation of the parameter estimates and confidence intervals. 
+- Estimate ARMA model parameters using the Levenberg Marquardt algorithm. Display the parameter estimates, the standard deviation of the parameter estimates and confidence intervals. (skip)
 - Diagnostic Analysis: Make sure to include the followings:
   - Diagnostic tests (confidence intervals, zero/pole cancellation, chi-square test).
   - Display the estimated variance of the error and the estimated covariance of the estimated parameters.
