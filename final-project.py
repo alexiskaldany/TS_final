@@ -94,7 +94,7 @@ plot_pacf(df.Appliances, ax=plt.gca(), lags=lags)
 fig.tight_layout(pad=3)
 plt.savefig(image_folder+'1c-ACF-PACF-Original.png', dpi=1000)
 plt.show()
-# Stem plot TODO :make symmetric
+
 stem_acf('Original-Appliances', acf_df(df.Appliances, 90), 19735)
 ###################
 # 1d. Correlation Matrix + Heatmap
@@ -387,7 +387,7 @@ plot_pacf(diff_combined_df['144_diff'], ax=plt.gca(), lags=lags)
 fig.tight_layout(pad=3)
 plt.savefig(image_folder+'Decomposition-144-ACF-PACF-Original.png', dpi=1000)
 plt.show()
-stem_acf('Appliances-150-diff-ACF',
+stem_acf('Appliances-144-diff-ACF',
          acf_df(diff_combined_df['144_diff'], 90), 19735)
 ###################
 res = STL(df.Appliances, period=10).fit()

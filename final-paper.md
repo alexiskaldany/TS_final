@@ -58,4 +58,66 @@
 
 ### 1a
 
-! [Dependent Variable vs Time]("")
+![Dependent Variable vs Time](https://raw.githubusercontent.com/alexiskaldany/TS_final/main/final-images/1a-dependent.png)
+
+![Stem Original](https://raw.githubusercontent.com/alexiskaldany/TS_final/main/final-images/Original-Appliances)
+
+![Heatmap](https://raw.githubusercontent.com/alexiskaldany/TS_final/main/final-images/1d-heatmap-corr.png)
+
+![ACF-PACF original](https://raw.githubusercontent.com/alexiskaldany/TS_final/main/final-images/1c-ACF-PACF-Original.png)
+
+## Stationarity
+
+![rolling_original](https://raw.githubusercontent.com/alexiskaldany/TS_final/main/final-images/rolling_original.png)
+
+![adf_stats](https://raw.githubusercontent.com/alexiskaldany/TS_final/main/final-images/1a-ADF-Stats.png)
+
+![kpss_stats](https://raw.githubusercontent.com/alexiskaldany/TS_final/main/final-images/1a-KPSS-Stats.png)
+
+![rolling_diff_150](https://raw.githubusercontent.com/alexiskaldany/TS_final/main/final-images/rolling_diff_150.png)
+
+![rolling_log_diff_150](https://raw.githubusercontent.com/alexiskaldany/TS_final/main/final-images/rolling_log_diff_150.png)
+
+## Decomposition
+
+![Decomposition-144-ACF-PACF-Original](https://raw.githubusercontent.com/alexiskaldany/TS_final/main/final-images/Decomposition-144-ACF-PACF-Original.png)
+
+![Appliances-144-diff-ACF](https://raw.githubusercontent.com/alexiskaldany/TS_final/main/final-images/Appliances-144-diff-ACF.png)
+
+![Original-Decomposition](https://raw.githubusercontent.com/alexiskaldany/TS_final/main/final-images/Original-Decomposition.png)
+
+![144-Diff-Decomposition](https://raw.githubusercontent.com/alexiskaldany/TS_final/main/final-images/144-Diff-Decomposition.png)
+
+![Cleaner-144-Decomposition](https://raw.githubusercontent.com/alexiskaldany/TS_final/main/final-images/Cleaner-144-Decomposition.png)
+
+![Seasonal-Adjusted-Decomposition](https://raw.githubusercontent.com/alexiskaldany/TS_final/main/final-images/Seasonal-Adjusted-Decomposition.png)
+
+![Detrended-Decomposition](https://raw.githubusercontent.com/alexiskaldany/TS_final/main/final-images/Detrended-Decomposition.png)
+
+## Base Models
+
+### Holt-Winters
+
+![rolling-HW-prediction](https://raw.githubusercontent.com/alexiskaldany/TS_final/main/final-images/rolling-HW-prediction.png)
+
+![HW-Train-Test-Predict](https://raw.githubusercontent.com/alexiskaldany/TS_final/main/final-images/HW-Train-Test-Predict.png)
+
+![HW-Test-Predict](https://raw.githubusercontent.com/alexiskaldany/TS_final/main/final-images/HW-Test-Predict.png)
+
+## Backwards Selection and Linear Model
+
+## ARMA (3,0)
+
+## ARMA(3,3)
+
+## ARIMA(3,0,0) x (0,3,0,12)
+
+## LSTM
+
+## Model Summary
+
+## Conclusion
+
+## Citations
+
+## Appendix + Code
