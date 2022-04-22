@@ -40,6 +40,7 @@ def visualize_loss(history, title,epochs):
 # %%
 # Reading csv
 df_predictions = pd.DataFrame()
+df_mse = pd.DataFrame(columns=['Model','MSE'])
 df_raw = pd.read_csv('final-data.csv', parse_dates=["date"])
 df = df_raw.copy()
 df['Date'] = pd.to_datetime(df_raw['date'])
@@ -1094,11 +1095,16 @@ plt.show()
 
 # %%
 # LSTM
-# 1e. Train/Test (80/20)
-n_input = 300
+### Keras Notes
+### Sequence_length and "unit" must be same value
+### Any inp
+epochs=100
+sequence_length = 12
+learning_rate=10 ** -4
 n_features = 25
 
-df_lstm = pd.read_csv('final-data.csv')
+#df_lstm = pd.read_csv('final-data.csv')
+df_lstm = df.copy()
 df_lstm.set_index('date', inplace=True)
 del df_lstm['rv1']
 del df_lstm['rv2']
@@ -1111,109 +1117,63 @@ df_train = df_lstm.iloc[:index_val, :]
 df_val = df_lstm.iloc[index_val:index_train, :]
 df_test = df_lstm.iloc[index_train:, :]
 
-
-# x_train, x_test, y_train, y_test = np.array(df_train.iloc[:,1:]),np.array(df_train.iloc[:,1]),np.array(df_test.iloc[:,1:]),np.array(df_test.iloc[:,1])
-
 tr_x = np.array(df_train.drop(columns=['Appliances'])).reshape(
     len(df_train), 25)
 
 tr_y = np.array(df_train[['Appliances']]).reshape(len(df_train), 1)
 
 val_x = np.array(df_val.drop(columns=['Appliances'])).reshape(
-    len(df_val), n_features, 1).reshape(len(df_val), 25, 1)
+    len(df_val), n_features, 1)
 
 val_y = np.array(df_val[['Appliances']]).reshape(len(df_val), 1, 1)
 
 test_x = np.array(df_test.drop(columns=['Appliances'])).reshape(
-    len(df_test), n_features, 1).reshape(len(df_test), 25, 1)
+    len(df_test), n_features, 1)
 
 test_y = np.array(df_test[['Appliances']]).reshape(df_test.shape[0], 1, 1)
 
-# #####
-# x_train = np.array(df_train.drop(columns=['Appliances','date']))
-# x_train_shaped = np.reshape(x_train,(len(x_train),25,1))
-# y_train = np.array(df_train.iloc[:,[1]])
-# y_train_shaped = np.reshape(y_train,(len(y_train),1,1))
-# x_val = np.array(df_val.drop(columns=['Appliances','date']))
-# x_val_shaped = np.reshape(x_val,(len(x_val),25,1))
-# y_val = np.array(df_val.iloc[:,[1]])
-# y_val_shaped = np.reshape(y_val,(len(y_val),1,1))
-# x_test = np.array(df_test.drop(columns=['Appliances','date']))
-# x_test_shaped = np.reshape(x_test,(len(x_test),25,1))
-# y_test = np.array(df_test.iloc[:,[1]])
-# y_test_shaped = np.reshape(y_test,(len(y_test),1,1))
-
-
-# train_loaded = TimeseriesGenerator(
-#     # x_train_shaped,
-#     # y_train_shaped,
-#     data=tr_x,
-#     targets=tr_y,
-#     length=n_input,
-
-# )
-# val_loaded = TimeseriesGenerator(
-#     # x_val_shaped,
-#     # y_val_shaped,
-#     data = val_x,
-#     targets = val_y,
-#     length=n_input,
-
-
-# )
-# test_loaded = TimeseriesGenerator(
-#     # x_test_shaped,
-#     # y_test_shaped,
-#     data=test_x,
-#     targets = test_y,
-#     length=n_input,
-
-# )
-
-# model = Sequential()
-# model.add(LSTM(50,activation = 'relu',return_sequences = True,input_shape=(50,1)))
-# model.add(Dense(1))
-# model.compile(loss='mean_squared_error', optimizer="adam", metrics=['mean_squared_error'])
-
-
-# model.fit(train_loaded,validation_data=val_loaded, epochs=1000)
 #%%
+
+
+
+
 inputs = timeseries_dataset_from_array(
-    data=tr_x, targets=None, sequence_length=2)
+    data=tr_x, targets=None, sequence_length=sequence_length)
 targets = timeseries_dataset_from_array(
-    data=tr_y, targets=None, sequence_length=2)
+    data=tr_y, targets=None, sequence_length=sequence_length)
 
 dataset = tf.data.Dataset.zip((inputs, targets))
 
 inputs_val = timeseries_dataset_from_array(
-    data=val_x, targets=None, sequence_length=2)
+    data=val_x, targets=None, sequence_length=sequence_length)
 targets_val = timeseries_dataset_from_array(
-    data=val_y, targets=None, sequence_length=2)
+    data=val_y, targets=None, sequence_length=sequence_length)
 
 inputs_test = timeseries_dataset_from_array(
-    data=test_x, targets=None, sequence_length=2)
+    data=test_x, targets=None, sequence_length=sequence_length)
 targets_test = timeseries_dataset_from_array(
-    data=test_y, targets=None, sequence_length=2)
+    data=test_y, targets=None, sequence_length=sequence_length)
 
 
 dataset = tf.data.Dataset.zip((inputs, targets))
 dataset_val = tf.data.Dataset.zip((inputs_val, targets_val))
 
-# %%
-epochs=1000
 model = Sequential()
 model.add(LSTM(25, activation='relu',
           return_sequences=True, input_shape=(None, 25)))
 model.add(LSTM(25, activation='relu',
           return_sequences=True, input_shape=(None, 25)))
 model.add(Dense(1))
-model.compile(loss='mean_squared_error',optimizer=tf.keras.optimizers.Adam(learning_rate=10 ** -5),
+model.compile(loss='mean_squared_error',optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
               metrics=[tf.keras.metrics.RootMeanSquaredError()])
-history = model.fit(dataset,validation_data=dataset_val,epochs=epochs,verbose = 2)
+history = model.fit(dataset,validation_data=dataset_val,epochs=epochs,verbose = 1)
+
 visualize_loss(model.history, "Training and Validation Loss",epochs)
 
 
 # %%
-df_predictions['LSTM'] = model.predict(inputs_test)
+# predictions
+lstm_pred = np.array(model.predict(inputs_test)).flatten
+df_predictions[f'lstm_{epochs}_epoch'] = lstm_pred
 
 # %%

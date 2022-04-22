@@ -57,7 +57,7 @@ determination). Pick at least two orders using GPAC table. (Done)
   - Is the derived model biased or this is an unbiased estimator?
   - Check the variance of the residual errors versus the variance of the forecast errors.
   - If you find out that the ARIMA or SARIMA model may better represents the dataset, then you can find the model accordingly. You are not constraint only to use of ARMA model. Finding an ARMA model is a minimum requirement and making the model better is always welcomed.
-- Deep Learning Model: Fit the dataset into multivariate LSTM model. You also need to perform hstep prediction using LSTM model. You can use tensorflow package in python for this section.
+- Deep Learning Model: Fit the dataset into multivariate LSTM model. You also need to perform hstep prediction using LSTM model. You can use tensorflow package in python for this section. (done)
 - Final Model selection: There should be a complete description of why your final model was picked over base-models ARMA, ARIMA, SARIMA and LSTM. You need to compare the performance of various models developed for your dataset and come up with the best model that represent the dataset the best.
 - Forecast function: Once the final mode is picked (SARIMA), the forecast function needs to be
 developed and included in your report.
