@@ -57,10 +57,10 @@ df['Date'] = pd.to_datetime(df_raw['date'])
 del df['date']
 del df['rv1']
 del df['rv2']
-df['Date'] = pd.to_datetime(df_raw['date'])
+#df['Date'] = pd.to_datetime(df_raw['date'])
 df.set_index('Date', inplace=True)
 df_undiff = df.copy()
-
+#%%
 # Dataset Cleaning
 df_na = df[df.isnull().any(axis=1)]
 print(f"There are {len(df_na)} many rows with NaN values")
@@ -882,28 +882,28 @@ print(" the condition number for X is = ", LA.cond(x_trainer))
 print(features)
 # %%
 # modeling after selection
-df_after_selection = df.drop(columns=features)
+df_after_selection = df.drop(columns=['T5','RH_5','T7','RH_7','RH_out'])
 df_after_selection_train = df_after_selection[:index_80]
 df_after_selection_test = df_after_selection[index_80:]
 x_train = df_after_selection.drop(columns=['Appliances'])[:index_80]
 x_test = df_after_selection.drop(columns=['Appliances'])[index_80:]
 y_train = df_after_selection.Appliances[:index_80]
 y_test = df_after_selection.Appliances[index_80:]
-x_train_ols = sm.add_constant(x_train)
-x_test_ols = sm.add_constant(x_test)
-# One Step
-OLS_model = sm.OLS(y_train, x_train_ols)
-OLS_results = OLS_model.fit()
-y_pred = OLS_results.predict(x_train_ols)
 
+
+# One Step
+OLS_model_t = sm.OLS(y_train, x_train)
+OLS_results_t = OLS_model_t.fit()
+y_pred = OLS_results_t.predict(x_train)
+#%%
 
 # Forecast
-OLS_model = sm.OLS(y_train, x_train_ols)
-OLS_results = OLS_model.fit()
-y_forecast = OLS_results.predict(x_test_ols)
-residuals_multi_model = np.subtract(
+OLS_model_r = sm.OLS(y_train, x_train)
+OLS_results_r = OLS_model_r.fit()
+y_forecast = OLS_results_r.predict(x_test)
+residuals_multi_model_r = np.subtract(
     np.array(df_after_selection_test.Appliances), np.array(y_forecast))
-forecast = OLS_results.summary()
+forecast = OLS_results_r.summary()
 
 plt.figure()
 plt.plot(df_after_selection_train.index,
@@ -941,7 +941,7 @@ stem_acf('Stem-ACF-Multi-Var-Model-Prediction',
 stem_acf('Stem-ACF-Multi-Var-Model-Forecast',
          acf_df(y_forecast, 90), len(df_train))
 stem_acf('Stem-ACF-Multi-Var-Model-Residuals',
-         acf_df(residuals_multi_model, 90), len(df_train))
+         acf_df(residuals_multi_model_r, 90), len(df_train))
 
 # train data
 print(f"MSE : {mse(y_pred).round(4)}")
@@ -976,7 +976,7 @@ model_notes.append('Likely best')
 # %%
 # ARIMA Modeling
 lags = 20
-acf_train_y = sm.tsa.stattools.acf(df_train.Appliances, nlags=lags)
+acf_train_y = sm.tsa.stattools.acf(diff_combined_df['144_diff'], nlags=lags)
 
 
 # GPAC plot
@@ -990,7 +990,7 @@ plt.ylabel('j values')
 plt.savefig(image_folder+'GPAC-Plot.png', dpi=1000)
 plt.show()
 
-
+#%%
 #### ARMA (3,0)
 na = 3
 nb = 0
@@ -1076,6 +1076,7 @@ model_ljb.append(sm.stats.acorr_ljungbox(arma_3_0_error,
 model_error_var.append(np.var(arma_3_0_error))
 model_notes.append('slightly worse')
 ###########
+#%%
 # ARMA (3,3)
 na = 3
 nb = 3
@@ -1088,7 +1089,7 @@ arma_3_3_pred = model_3_3.predict(start=0, end=15787)
 arma_3_3_error = df_train.Appliances - arma_3_3_pred.values
 
 # test data
-arma_3_3_forecast = model_3_3.predict(start=15788, end=19734)
+arma_3_3_forecast = model_3_3.forecast(steps=len(df_test))
 arma_3_3_residuals = df_test.Appliances - arma_3_3_forecast.values
 
 stem_acf('Stem-ACF-3-3-Errors', acf_df(arma_3_3_error, 90), len(df_train))
@@ -1104,16 +1105,16 @@ print(sm.stats.acorr_ljungbox(arma_3_3_error,
 print(' Q value :')
 print(' mean for the ARMA(3,3) model error is\n', np.mean(arma_3_3_error))
 print(' variance for the ARMA(3,3) model error is\n', np.var(arma_3_3_error))
-print("covariance Matrix is\n", model_3_0.cov_params())
-print("standard error coefficients are \n", model_3_0.bse)
-print(' confidence intervals are\n', model_3_0.conf_int())
+print("covariance Matrix is\n", model_3_3.cov_params())
+print("standard error coefficients are \n", model_3_3.bse)
+print(' confidence intervals are\n', model_3_3.conf_int())
 print(' RMSE for the ARMA(3,3) model error is\n ', mean_squared_error(
     df_train['Appliances'], arma_3_3_pred.values, squared=False))
 
-
+#%%
 # forecasting data
 print('The MSE for the forecasting data was found to be', mse(arma_3_3_residuals))
-print(sm.stats.acorr_ljungbox(arma_3_0_residuals,
+print(sm.stats.acorr_ljungbox(arma_3_3_residuals,
       lags=[5], boxpierce=True, return_df=True))
 print('The Q value was found to be 4824.96647  with a p-value of 0.0 ')
 print('the mean for the ARMA(3,0) model forecasting error is\n',
@@ -1172,7 +1173,7 @@ print(result.summary())
 # Train
 sarima_prediction = result.predict(start=0, end=len(df_train), dynamic=False)
 sarima_prediction_mean = np.mean(np.array(sarima_prediction))
-sarima_errors = df_train.Appliances - sarima_prediction
+sarima_errors = df_train.Appliances[:-1] - sarima_prediction[:-1]
 
 # test data
 
@@ -1363,7 +1364,7 @@ df_models = pd.DataFrame()
 df_models['models'] = models
 df_models['mse'] = model_mse
 df_models['ljb'] = model_ljb
-df_models['error_var'] = model_error_var
-df_models['notes'] = model_notes
+#df_models['error_var'] = model_error_var
+#df_models['notes'] = model_notes
 df_models.to_csv('models_results.csv')
 #%%
