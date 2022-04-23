@@ -104,20 +104,79 @@
 
 ![HW-Test-Predict](https://raw.githubusercontent.com/alexiskaldany/TS_final/main/final-images/HW-Test-Predict.png)
 
+![H-W-Train](H-W-Train.png)
+
+![HW-Test_PACF](HW-Test_PACF.png)
+
+### Average Method
+![Average-train-test-predict](Average-train-test-predict.png)
+
+![Average-test-predict](Average-test-predict.png)
+
+![Average-Error-ACF](Average-Error-ACF.png)
+
+### Naive Method
+
+![Naive-train-test-predict.png](Naive-train-test-predict.png)
+
+![Naive-test-predict.png](Naive-test-predict.png)
+
+![Stem-ACF-Naive-Err](Stem-ACF-Naive-Err.png)
+
+### Drift Method
+
+![Drift-Train-Test-Predict.png](Drift-Train-Test-Predict.png)
+
+![]()
+
+
+![]()
+![]()
+![]()
+
+
+
 ## Backwards Selection and Linear Model
-
+![]()
+![]()
+![]()
+![]()
+![]()
+![]()
+![]()
 ## ARMA (3,0)
-
+![]()
+![]()
+![]()
+![]()
+![]()
 ## ARMA(3,3)
+![]()
+![]()
+![]()
+![]()
+![]()
+![]()
+![]()
 
 ## ARIMA(3,0,0) x (0,3,0,12)
-
+![]()
+![]()
+![]()
+![]()
+![]()
+![]()
+![]()
+![]()
 ## LSTM
+![]()
+![]()
+![]()
 
 ## Model Summary
-
+![]()
 ## Conclusion
-
+![]()
 ## Citations
 
 ## Appendix + Code
