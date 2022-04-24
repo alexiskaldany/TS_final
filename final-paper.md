@@ -109,6 +109,7 @@
 ![HW-Test_PACF](HW-Test_PACF.png)
 
 ### Average Method
+
 ![Average-train-test-predict](Average-train-test-predict.png)
 
 ![Average-test-predict](Average-test-predict.png)
@@ -129,14 +130,12 @@
 
 ![]()
 
-
 ![]()
 ![]()
 ![]()
-
-
 
 ## Backwards Selection and Linear Model
+
 ![]()
 ![]()
 ![]()
@@ -144,13 +143,17 @@
 ![]()
 ![]()
 ![]()
+
 ## ARMA (3,0)
+
 ![]()
 ![]()
 ![]()
 ![]()
 ![]()
+
 ## ARMA(3,3)
+
 ![]()
 ![]()
 ![]()
@@ -160,6 +163,7 @@
 ![]()
 
 ## ARIMA(3,0,0) x (0,3,0,12)
+
 ![]()
 ![]()
 ![]()
@@ -168,15 +172,21 @@
 ![]()
 ![]()
 ![]()
+
 ## LSTM
+
 ![]()
 ![]()
 ![]()
 
 ## Model Summary
+
 ![]()
+
 ## Conclusion
+
 ![]()
+
 ## Citations
 
 ## Appendix + Code
