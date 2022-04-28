@@ -4,14 +4,13 @@
                 Spring 2022
                 DATS_6313_10
                 Overseen by Professor Reza Jafari
+                Github: https://github.com/alexiskaldany/TS_final
 
 -----------------------
 
 ## Abstract
 
------------------------
-
-## Introduction
+- In this report a dataset composed of various readings taken from a home in Belgium, having a dependent variable of energy use by Appliances, is predicted using a variety of statistical methods.
 
 -----------------------
 
@@ -208,53 +207,100 @@
 
 ## GPAC
 
-- Below is my GPAC of the undifferenced, original dependent variable.
+- Below is my GPAC of the undifferenced, original dependent variable. I chose Na = 3, Nb = 0 as the ARMA selection according to what I saw in the plot.
 ![GPAC-Plot.png](https://raw.githubusercontent.com/alexiskaldany/TS_final/main/final-images/gpac-indicated.png)
 
 ## ARMA (3,0)
 
+- Starting with ARMA (3,0), we have below the ACF of the errors generated from the prediction.
 ![Stem-ACF-3-0-Errors](https://raw.githubusercontent.com/alexiskaldany/TS_final/main/final-images/Stem-ACF-3-0-Errors.png)
 
+- Below we have the ACF generated from the forecast, which shows significantly more white noise.
 ![Stem-ACF-3-0-Residuals](https://raw.githubusercontent.com/alexiskaldany/TS_final/main/final-images/Stem-ACF-3-0-Residuals.png)
 
+- Below we have the train-test-forecast of the ARMA(3,0) model. The forecast converges to a value of 98 for some reason.
 ![ARMA-3-0-Train-Test-Predict.png](https://raw.githubusercontent.com/alexiskaldany/TS_final/main/final-images/ARMA-3-0-Train-Test-Predict.png)
 
+- Here we can more clearly see how the ARMA(3,0) converges on a single value.
 ![ARMA-3-0-Test-Predict.png](https://raw.githubusercontent.com/alexiskaldany/TS_final/main/final-images/ARMA-3-0-Test-Predict.png)
 
 ## ARMA(3,3)
 
+- Below is the plot of the ACF of the predicated values. Clearly very little white noise.
 ![Stem-ACF-3-3-Errors](https://raw.githubusercontent.com/alexiskaldany/TS_final/main/final-images/Stem-ACF-3-3-Errors.png)
 
+- Below is the ACF of the forecasted values.
 ![Stem-ACF-3-3-Residuals](https://raw.githubusercontent.com/alexiskaldany/TS_final/main/final-images/Stem-ACF-3-3-Residuals.png)
 
+- Below is the plot of the train-test-predict-forecast values.
 ![ARMA-3-3-Train-Test-Predict.png](https://raw.githubusercontent.com/alexiskaldany/TS_final/main/final-images/ARMA-3-3-Train-Test-Predict.png)
+
+- Below is the test-forecast plot.
 
 ![ARMA-3-3-Test-Predict.png](https://raw.githubusercontent.com/alexiskaldany/TS_final/main/final-images/ARMA-3-3-Test-Predict.png)
 
 ## ARIMA(3,0,0) x (0,3,0,12)
 
+- The SARIMA model is (3,0,0) x (0,3,0,12).
+
+- Below is the plot of the SARIMA errors.
 ![Stem-ACF-SARIMA-Errors](https://raw.githubusercontent.com/alexiskaldany/TS_final/main/final-images/Stem-ACF-SARIMA-Errors.png)
 
+- Below is the plot of the SARIMA residuals.
 ![Stem-ACF-SARIMA-Residuals](https://raw.githubusercontent.com/alexiskaldany/TS_final/main/final-images/Stem-ACF-SARIMA-Residuals.png)
+
+- Below is the plot of the train-test-predict.
 ![SARIMA-No-Forecast-Test-Predict.png](https://raw.githubusercontent.com/alexiskaldany/TS_final/main/final-images/SARIMA-No-Forecast-Test-Predict.png)
 
+- Below is the plot of the train-test-predict-forecast.
 ![SARIMA-WITH-Forecast-Test-Predict.png](https://raw.githubusercontent.com/alexiskaldany/TS_final/main/final-images/SARIMA-WITH-Forecast-Test-Predict.png)
 
 ## LSTM
 
+- The LSTM model I build was rather simple. I used two LSTM layers and a Dense layer of shape (1) to train the model and the Dense layer to collect the output of the LSTM layers into a single value. I then used that trained model to predict and forecast.
+
+```
+model_lstm = Sequential()
+model_lstm.add(LSTM(25, activation='relu',
+          return_sequences=True, input_shape=(None, 25)))
+model_lstm.add(LSTM(25, activation='relu',
+          return_sequences=True, input_shape=(None, 25)))
+model_lstm.add(Dense(1))
+model_lstm.compile(loss='mean_squared_error', optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
+              metrics=['mean_squared_error'])
+
+history = model_lstm.fit(
+    dataset, validation_data=dataset_val, epochs=epochs, verbose=1,
+    callbacks=[reduce_lr_on_plateau_cb])
+
+```
+
+- Below is the ACF of the errors of the LSTM model.
 ![Stem-ACF-LSTM-Errors](https://raw.githubusercontent.com/alexiskaldany/TS_final/main/final-images/Stem-ACF-LSTM-Errors.png)
 
+- Below is the plot of the Train, test, and forecasting data.
 ![LSTM-WITH-Forecast-Test-Predict.png](https://raw.githubusercontent.com/alexiskaldany/TS_final/main/final-images/LSTM-WITH-Forecast-Test-Predict.png)
 
+- Below is a graph of training/validation loss with increasing epochs. It is clear increasing the epochs would not improve the model any further.
 ![LSTM-Training-Val-Loss-{epochs}](https://raw.githubusercontent.com/alexiskaldany/TS_final/main/final-images/LSTM-Training-Val-Loss-{epochs}.png)
 
 ## Model Summary
+
+- The table below contains a summary of MSE and Q values of the various models.
+
+- The strongest two models were the ARMA (3,0) and ARMA (3,3), followed by the Naive,Drift, and SES models. This is likely because any model which has a forecast of a flatline close to the 0 value will be pretty close to the underlying mean value.
+
+- LSTM has sadly not that good for reasons I don't understand. I think the "sequence-length" parameter would have significantly altered my models effectiveness, but having a sequence length greater than one results in an output containing multiple values, which does not reflect the kind of output we are looking for in these experiments.
 
 ![model_results](https://raw.githubusercontent.com/alexiskaldany/TS_final/main/final-images/model_results.png)
 
 ## Conclusion
 
+The nature of this dataset, with a dependent variable which rests at a certain value and irreguraly jumps 1000x, was always going to have unexpected dynamics across the different models. A model like the naive or average method, models of great simplicity, were nearly as good as much more complex models like ARMA or LSTM.
+
 ## Citations
+
+Luis M. Candanedo, Veronique Feldheim, Dominique Deramaix, Data driven prediction models of energy use of appliances in a low-energy house, Energy and Buildings, Volume 140, 1 April 2017, Pages 81-97, ISSN 0378-7788,
 
 ## Appendix + Code
 
